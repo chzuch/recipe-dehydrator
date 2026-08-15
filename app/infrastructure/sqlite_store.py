@@ -6,11 +6,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import sqlite3
 import uuid
 from pathlib import Path
 
 from app.domain.models import Recipe
+
+logger = logging.getLogger(__name__)
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS cards (
@@ -61,7 +64,14 @@ class SQLiteCardStore:
         def _do() -> list[tuple[str, Recipe]]:
             with self._connect() as conn:
                 rows = conn.execute("SELECT id, recipe_json FROM cards ORDER BY created_at DESC").fetchall()
-            return [(r["id"], Recipe.model_validate_json(r["recipe_json"])) for r in rows]
+            # 单张卡片反序列化失败（如 schema 变更后的旧数据）跳过，不拖垮整个列表
+            result: list[tuple[str, Recipe]] = []
+            for r in rows:
+                try:
+                    result.append((r["id"], Recipe.model_validate_json(r["recipe_json"])))
+                except Exception as exc:  # ValidationError 等
+                    logger.warning("跳过损坏卡片 %s: %s", r["id"], exc)
+            return result
 
         return await asyncio.to_thread(_do)
 
