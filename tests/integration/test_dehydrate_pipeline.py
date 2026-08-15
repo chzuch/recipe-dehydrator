@@ -20,7 +20,7 @@ SAMPLE_RECIPE: dict[str, Any] = {
     "difficulty": "中等",
     "servings": "2人份",
     "total_time": "40分钟",
-    "ingredients": [{"name": "牛腩肉", "amount": "500克", "note": None}],
+    "ingredients": [{"name": "牛腩肉", "amount": "500克", "note": None, "category": "主料", "essential": True}],
     "tools": ["锅"],
     "steps": [
         {
@@ -155,9 +155,9 @@ class TestDehydratePipeline:
         with_dups = {
             **SAMPLE_RECIPE,
             "ingredients": [
-                {"name": "花生油", "amount": "50克"},
-                {"name": "花生油", "amount": "700克"},
-                {"name": "蚝油", "amount": "100克"},
+                {"name": "花生油", "amount": "50克", "note": None, "category": "调料", "essential": True},
+                {"name": "花生油", "amount": "700克", "note": None, "category": "调料", "essential": True},
+                {"name": "蚝油", "amount": "100克", "note": None, "category": "调料", "essential": True},
             ],
         }
         usecase, store, _, _ = _make_usecase(FakeLLMClient([with_dups]))

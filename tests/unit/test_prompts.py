@@ -25,6 +25,12 @@ class TestBuildSplitPrompt:
         assert "连续" in SYSTEM_SPLIT
         assert "start_sec" in SYSTEM_SPLIT
 
+    def test_system_v3_schema_fields(self) -> None:
+        """split-v3：食材分类（category）与核心筛选（essential）。"""
+        assert "category" in SYSTEM_SPLIT
+        assert "essential" in SYSTEM_SPLIT
+        assert "主料" in SYSTEM_SPLIT and "需提前自制" in SYSTEM_SPLIT
+
 
 class TestBuildRetryPrompt:
     def test_includes_previous_output_and_issues(self) -> None:

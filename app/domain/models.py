@@ -24,6 +24,8 @@ class Ingredient(BaseModel):
     name: str = Field(min_length=1, description="食材名，如「牛腩肉」")
     amount: str | None = Field(default=None, description="用量，如「500克」")
     note: str | None = Field(default=None, description="选购/处理备注，如「选肥瘦相间的」")
+    category: Literal["主料", "配菜", "调料", "需提前自制"] = Field(description="食材分类")
+    essential: bool = Field(description="是否必不可少（核心食材）；可选/锦上添花为 False")
 
 
 class Step(BaseModel):

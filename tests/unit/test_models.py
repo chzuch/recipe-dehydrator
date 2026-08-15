@@ -43,7 +43,10 @@ class TestRecipe:
     def test_shopping_list_filters_have(self) -> None:
         recipe = Recipe(
             title="番茄炒蛋",
-            ingredients=[Ingredient(name="番茄", amount="2个"), Ingredient(name="鸡蛋", amount="3个")],
+            ingredients=[
+                Ingredient(name="番茄", amount="2个", category="配菜", essential=True),
+                Ingredient(name="鸡蛋", amount="3个", category="主料", essential=True),
+            ],
         )
         missing = recipe.shopping_list({"番茄"})
         assert [i.name for i in missing] == ["鸡蛋"]
@@ -51,6 +54,6 @@ class TestRecipe:
     def test_shopping_list_empty_have_returns_all(self) -> None:
         recipe = Recipe(
             title="番茄炒蛋",
-            ingredients=[Ingredient(name="番茄")],
+            ingredients=[Ingredient(name="番茄", category="配菜", essential=True)],
         )
         assert len(recipe.shopping_list()) == 1

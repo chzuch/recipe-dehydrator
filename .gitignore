@@ -15,6 +15,7 @@ wheels/
 # Runtime data & secrets
 data/
 .env
+cookies.txt
 
 # Tool caches
 .mypy_cache/

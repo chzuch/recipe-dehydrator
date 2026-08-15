@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     samples_dir: Path = Path("data/samples")
     db_path: Path = Path("data/cards.db")
 
-    # B站登录 cookie 文件（Netscape cookies.txt 格式）。
+    # B站登录 cookie 文件（Netscape cookies.txt 格式），放项目根（勿放 data/，会被清理）。
     # B站字幕（含 AI 字幕）需要登录态才返回，未配置时无字幕视频会报"无字幕"。
     bilibili_cookie_file: Path | None = None
 

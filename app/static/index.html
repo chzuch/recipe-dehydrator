@@ -18,7 +18,7 @@
   button.primary:disabled { opacity: .6; cursor: wait; }
   .container { display: flex; gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
   .main { flex: 1; min-width: 0; }
-  .side { width: 260px; flex-shrink: 0; }
+  .side { width: 300px; flex-shrink: 0; }
   .panel { background: var(--card); border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
   .panel + .panel { margin-top: 16px; }
   .warn { background: #fff7e6; border: 1px solid #ffe1a8; color: #8a5b00; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: 13px; }
@@ -28,7 +28,10 @@
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
   @media (max-width: 800px) { .cols { grid-template-columns: 1fr; } .container { flex-direction: column-reverse; } .side { width: 100%; } }
   h3 { font-size: 15px; margin: 0 0 10px; border-left: 4px solid var(--accent); padding-left: 8px; }
+  .cat { margin-top: 12px; }
+  .cat-label { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
   .ing { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
+  .ing.optional { opacity: .55; }
   .ing.done { color: var(--muted); text-decoration: line-through; }
   .ing .amount { margin-left: auto; color: var(--muted); }
   .step { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f0ede6; }
@@ -39,6 +42,7 @@
   .step .done { color: #2e7d32; font-size: 13px; margin-top: 4px; }
   .step .tip { color: #b26a00; font-size: 13px; margin-top: 4px; }
   .step img { max-width: 220px; border-radius: 8px; margin-top: 8px; display: block; }
+  .step .watch { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--accent); text-decoration: none; }
   .tool { display: inline-block; background: #f3efe8; border-radius: 20px; padding: 4px 12px; font-size: 13px; margin: 0 6px 6px 0; }
   .history-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f2efe9; }
   .history-item:hover { background: #f6f1ea; }
@@ -48,6 +52,9 @@
   .editing textarea { width: 100%; min-height: 360px; font-family: monospace; font-size: 13px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; }
   .row-actions { display: flex; gap: 8px; margin-top: 12px; }
   .badge { font-size: 12px; background: #eee; border-radius: 20px; padding: 2px 10px; }
+  details.opt-group { margin-top: 6px; }
+  details.opt-group summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 4px 0; }
+  details.opt-group summary:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -93,10 +100,39 @@ async function handle(resp) {
 }
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+const CATEGORIES = ['主料', '配菜', '调料', '需提前自制'];
+
+// 按分类分组食材，组内核心在前、可选在后
+function groupIngredients(ingredients) {
+  const groups = new Map();
+  for (const ing of ingredients || []) {
+    const cat = ing.category || '调料';
+    if (!groups.has(cat)) groups.set(cat, { core: [], opt: [] });
+    (ing.essential === false ? groups.get(cat).opt : groups.get(cat).core).push(ing);
+  }
+  // 保证分类顺序
+  const ordered = [];
+  for (const cat of CATEGORIES) if (groups.has(cat)) ordered.push([cat, groups.get(cat)]);
+  for (const [cat, g] of groups) if (!CATEGORIES.includes(cat)) ordered.push([cat, g]);
+  return ordered;
+}
+
+function renderIngredient(ing, checkbox) {
+  const optional = ing.essential === false;
+  const cb = checkbox ? `<input type="checkbox" onchange="toggleHave(this, '${esc(ing.name)}')">` : '';
+  return `<div class="ing${optional ? ' optional' : ''}">${cb}
+    <span>${esc(ing.name)}</span>${ing.note ? `<span class="badge">${esc(ing.note)}</span>` : ''}
+    <span class="amount">${esc(ing.amount || '')}</span></div>`;
+}
+
+// 「家中已有」勾选状态（按食材名），切卡片时重置
+let haveSet = new Set();
+
 function render(recipe, cardId) {
   $('#empty-hint').hidden = true;
   $('#card').hidden = false;
-  const have = new Set();
+  haveSet = new Set();
+  const groups = groupIngredients(recipe.ingredients);
   $('#card').innerHTML = `
     <div class="recipe-title">${esc(recipe.title)}</div>
     <div class="meta">
@@ -110,10 +146,12 @@ function render(recipe, cardId) {
     <div class="cols">
       <div>
         <h3>🥬 食材</h3>
-        ${(recipe.ingredients || []).map((g, i) => `
-          <div class="ing" data-i="${i}"><input type="checkbox" onchange="toggleHave(this, '${esc(g.name)}')">
-            <span>${esc(g.name)}</span>${g.note ? `<span class="badge">${esc(g.note)}</span>` : ''}
-            <span class="amount">${esc(g.amount || '')}</span></div>`).join('') || '<div class="empty">无食材</div>'}
+        ${groups.map(([cat, g]) => `
+          <div class="cat">
+            <div class="cat-label">${esc(cat)}</div>
+            ${g.core.map(i => renderIngredient(i, true)).join('')}
+            ${g.opt.length ? `<details class="opt-group"><summary>可选 ${g.opt.length} 项（可省略）</summary>${g.opt.map(i => renderIngredient(i, true)).join('')}</details>` : ''}
+          </div>`).join('') || '<div class="empty">无食材</div>'}
       </div>
       <div>
         <h3>🔪 工具</h3>
@@ -132,6 +170,7 @@ function render(recipe, cardId) {
           ${s.done_when ? `<div class="done">✅ ${esc(s.done_when)}</div>` : ''}
           ${s.tip ? `<div class="tip">⚠️ ${esc(s.tip)}</div>` : ''}
           ${s.frame_path ? `<img src="/api/frames/${encodeURIComponent(s.frame_path)}" alt="步骤${i+1}">` : ''}
+          ${recipe.source_url ? `<a class="watch" href="${esc(recipe.source_url)}?t=${Math.round(s.start_sec)}" target="_blank">▶ 看原视频 ${fmt(s.start_sec)}</a>` : ''}
         </div>
       </div>`).join('') || '<div class="empty">无步骤</div>'}
     <div class="row-actions">
@@ -143,18 +182,26 @@ function render(recipe, cardId) {
 }
 
 function fmt(sec) { const s = Math.round(sec); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+
+// 买菜清单：按分类分组，核心食材默认展示，可选折叠；已勾选的「家中已有」不显示
+function renderShopping(recipe) {
+  const groups = groupIngredients(recipe.ingredients);
+  const html = groups.map(([cat, g]) => {
+    const core = g.core.filter(i => !haveSet.has(i.name));
+    const items = core.map(i => `<div class="ing"><span>${esc(i.name)}</span><span class="amount">${esc(i.amount || '')}</span></div>`).join('');
+    const opt = g.opt.length ? `<details class="opt-group"><summary>可选 ${g.opt.length} 项</summary>${g.opt.map(i => `<div class="ing optional"><span>${esc(i.name)}</span><span class="amount">${esc(i.amount || '')}</span></div>`).join('')}</details>` : '';
+    if (!items && !opt) return '';
+    return `<div class="cat"><div class="cat-label">${esc(cat)}</div>${items}${opt}</div>`;
+  }).join('');
+  $('#shopping').innerHTML = html || '<div class="empty" style="padding:10px">食材齐了 🎉</div>';
+}
+
 function toggleHave(cb, name) {
   cb.closest('.ing').classList.toggle('done', cb.checked);
-  const need = [...document.querySelectorAll('.ing:not(.done) .badge')];
-  void need;
-  const missing = [...document.querySelectorAll('.ing:not(.done)')].map(el => el.textContent.trim());
-  $('#shopping').innerHTML = missing.length ? missing.map(m => `<div class="ing">${esc(m)}</div>`).join('') : '<div class="empty">食材齐了 🎉</div>';
+  if (cb.checked) haveSet.add(name); else haveSet.delete(name);
+  renderShopping(window.__card.recipe);
 }
-function renderShopping(recipe) {
-  const items = (recipe.ingredients || []).map(g =>
-    `<div class="ing"><span>${esc(g.name)}</span><span class="amount">${esc(g.amount || '')}</span></div>`);
-  $('#shopping').innerHTML = items.join('') || '<div class="empty">脱水后自动生成</div>';
-}
+
 function editMode() {
   const { recipe } = window.__card;
   $('#card').innerHTML = `

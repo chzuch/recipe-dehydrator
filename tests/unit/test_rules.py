@@ -16,6 +16,11 @@ def _recipe(*steps: Step, ingredients: list[Ingredient] | None = None) -> Recipe
     return Recipe(title="测试菜", steps=list(steps), ingredients=ingredients or [])
 
 
+def _ing(name: str, amount: str | None = None, note: str | None = None) -> Ingredient:
+    """测试食材构造器：category/essential 用占位值。"""
+    return Ingredient(name=name, amount=amount, note=note, category="调料", essential=True)
+
+
 def _step(index: int, start: float, end: float, text: str = "") -> Step:
     return Step(
         index=index, title=text or f"步骤{index}", description=text or f"做{index}", start_sec=start, end_sec=end
@@ -26,14 +31,14 @@ class TestIngredientClosure:
     def test_ingredient_mentioned_in_step_is_ok(self) -> None:
         recipe = _recipe(
             _step(1, 0, 10, "切牛腩肉"),
-            ingredients=[Ingredient(name="牛腩肉")],
+            ingredients=[_ing(name="牛腩肉")],
         )
         assert check_ingredient_closure(recipe) == []
 
     def test_missing_ingredient_reports_warning(self) -> None:
         recipe = _recipe(
             _step(1, 0, 10, "切牛腩肉"),
-            ingredients=[Ingredient(name="土豆")],
+            ingredients=[_ing(name="土豆")],
         )
         issues = check_ingredient_closure(recipe)
         assert len(issues) == 1
@@ -43,7 +48,7 @@ class TestIngredientClosure:
     def test_ingredient_name_ignores_spaces(self) -> None:
         recipe = _recipe(
             _step(1, 0, 10, "放入 生抽"),
-            ingredients=[Ingredient(name="生抽")],
+            ingredients=[_ing(name="生抽")],
         )
         assert check_ingredient_closure(recipe) == []
 
@@ -90,7 +95,7 @@ class TestValidateRecipe:
         recipe = _recipe(
             _step(1, 0, 10, "切牛腩肉"),
             _step(2, 50, 60, "炖"),
-            ingredients=[Ingredient(name="土豆")],
+            ingredients=[_ing(name="土豆")],
         )
         issues = validate_recipe(recipe, video_duration_sec=600)
         codes = {i.code for i in issues}
@@ -102,10 +107,10 @@ class TestMergeDuplicateIngredients:
     def test_merges_same_name_keeping_order(self) -> None:
         merged = merge_duplicate_ingredients(
             [
-                Ingredient(name="花生油", amount="50克"),
-                Ingredient(name="蚝油", amount="100克"),
-                Ingredient(name="花生油", amount="700克"),
-                Ingredient(name="花生油", amount="150克", note="炒鸡用"),
+                _ing(name="花生油", amount="50克"),
+                _ing(name="蚝油", amount="100克"),
+                _ing(name="花生油", amount="700克"),
+                _ing(name="花生油", amount="150克", note="炒鸡用"),
             ]
         )
         assert [i.name for i in merged] == ["花生油", "蚝油"]
@@ -114,8 +119,8 @@ class TestMergeDuplicateIngredients:
     def test_merges_notes(self) -> None:
         merged = merge_duplicate_ingredients(
             [
-                Ingredient(name="姜片", amount="100克", note="老油用"),
-                Ingredient(name="姜片", amount="50克", note="炒鸡用"),
+                _ing(name="姜片", amount="100克", note="老油用"),
+                _ing(name="姜片", amount="50克", note="炒鸡用"),
             ]
         )
         assert merged[0].amount == "100克；50克"
@@ -123,11 +128,11 @@ class TestMergeDuplicateIngredients:
         assert "老油用" in merged[0].note and "炒鸡用" in merged[0].note
 
     def test_unique_ingredients_untouched(self) -> None:
-        merged = merge_duplicate_ingredients([Ingredient(name="鸡腿", amount="2根"), Ingredient(name="辣椒")])
+        merged = merge_duplicate_ingredients([_ing(name="鸡腿", amount="2根"), _ing(name="辣椒")])
         assert len(merged) == 2
 
     def test_name_with_spaces_merged(self) -> None:
         merged = merge_duplicate_ingredients(
-            [Ingredient(name="花 生 油"), Ingredient(name="花生油", amount="100克")]
+            [_ing(name="花 生 油"), _ing(name="花生油", amount="100克")]
         )
         assert len(merged) == 2  # 不 trim 内部空格，仅去重同名（含空格视为不同，保守）
