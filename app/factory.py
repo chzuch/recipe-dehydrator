@@ -53,7 +53,9 @@ def build_services(settings: Settings) -> Services:
         "KIMI_MODEL": settings.kimi_model,
     }
     llm = create_llm_client(settings.llm_provider, env)
-    fetcher = BilibiliFetcher()
+    fetcher = BilibiliFetcher(
+        cookiefile=str(settings.bilibili_cookie_file) if settings.bilibili_cookie_file else None
+    )
     frames = FFmpegFrameExtractor()
     store = SQLiteCardStore(settings.db_path)
     dehydrate = DehydrateUseCase(

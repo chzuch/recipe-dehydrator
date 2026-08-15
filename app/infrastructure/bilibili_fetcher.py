@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)
 
 _SUBTITLE_EXTS = (".json3", ".json", ".vtt", ".srt")
 _TMP_PREFIX = "vdh-fetch-"
-# B站是 DASH 音视频分离：单格式选择器（best 等）必然失败，
-# 必须用 bv*+ba 组合语法（已用真实视频实测，勿改回单格式写法）。
-VIDEO_FORMAT = "bv*[height<=360]+ba/b"
+# B站是 DASH 音视频分离：单格式选择器（best 等）必然失败，必须用 bv*+ba 组合语法。
+# 不限制分辨率上限（部分视频没有 360p/480p），用 format_sort 偏好低分辨率控制体积。
+VIDEO_FORMAT = "bv*+ba/b"
+VIDEO_FORMAT_SORT = ["res:480", "res:360"]
 
 
 class VideoInfoImpl(BaseModel):
@@ -36,7 +37,8 @@ class VideoInfoImpl(BaseModel):
 
 
 class BilibiliFetcher:
-    def __init__(self) -> None:
+    def __init__(self, cookiefile: str | None = None) -> None:
+        self._cookiefile = cookiefile
         self._tmp_dir: Path | None = None
         self._video_file: Path | None = None
         self._subtitles: list[SubtitleLine] = []
@@ -89,7 +91,11 @@ class BilibiliFetcher:
         }
         if with_video:
             opts["format"] = VIDEO_FORMAT
+            opts["format_sort"] = VIDEO_FORMAT_SORT
             opts["merge_output_format"] = "mp4"
+        if self._cookiefile:
+            # B站字幕（含 AI 字幕）需登录 cookie 才返回（已实测确认）
+            opts["cookiefile"] = self._cookiefile
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
             if not isinstance(info, dict):

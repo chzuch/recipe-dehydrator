@@ -56,6 +56,7 @@ class TestExtractFormat:
 
         assert info["title"] == "测试视频"
         assert instances[0].opts["format"] == VIDEO_FORMAT
+        assert instances[0].opts["format_sort"] == ["res:480", "res:360"]
         assert instances[0].opts["merge_output_format"] == "mp4"
         assert instances[0].opts["skip_download"] is False
 
@@ -69,6 +70,27 @@ class TestExtractFormat:
 
         assert instances[0].opts["skip_download"] is True
         assert "format" not in instances[0].opts
+
+    def test_cookiefile_attached_when_configured(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        instances = _patch_ydl(monkeypatch, _FakeYDL)
+        fetcher = BilibiliFetcher(cookiefile="data/cookies.txt")
+        fetcher._tmp_dir = tmp_path
+
+        fetcher._extract("https://www.bilibili.com/video/BV1xx", with_video=True)
+
+        assert instances[0].opts["cookiefile"] == "data/cookies.txt"
+
+    def test_no_cookiefile_when_unconfigured(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        instances = _patch_ydl(monkeypatch, _FakeYDL)
+        fetcher = _fetcher_with_tmp(tmp_path)
+
+        fetcher._extract("https://www.bilibili.com/video/BV1xx", with_video=True)
+
+        assert "cookiefile" not in instances[0].opts
 
     async def test_download_error_translated(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
