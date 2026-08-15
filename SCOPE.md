@@ -98,13 +98,16 @@
 
 - Python 3.14 + uv 管理依赖
 - 后端：FastAPI + SQLite
-- 前端：单个 HTML 页面（原生 JS / 轻量框架，不引入构建链）
+- 前端：**TypeScript + esbuild**（轻量构建：esbuild 单二进制毫秒编译，区别于 webpack 全家桶）+ 浏览器原生 ES Modules
+  - 修订记录：v0.1 原定「单个 HTML 页面（原生 JS，不引入构建链）」，因 v0.2 前端承担菜谱库 + 三模式（见 `docs/frontend-design.md`），单文件不可维护，2026-08 修订为 TS + esbuild
+  - 类型纪律与后端对齐：前端 `tsc --noEmit` 与后端 mypy strict 同等级别
+  - `types.ts` 手动维护与后端 Pydantic schema 对齐
 - 抓取：yt-dlp（字幕 + 视频）
-- 抽帧：ffmpeg
+- 抽帧/GIF：ffmpeg
 - LLM：DeepSeek（默认）为主，provider 可切换 Qwen / Kimi（可配置）
   - 三家 API key 由用户提供，配置存本地 `.env`
 - 测试：pytest（unit + integration；LLM 一律用 fake 实现，测试不消耗真实 API）
-- 质量：ruff（lint + format）+ mypy（类型检查，strict 渐进开启）
+- 质量门禁四件套：`pytest` + `ruff check` + `mypy`（strict）+ `tsc --noEmit`
 
 ### 环境现状（已核查）
 - Python 3.14.6 ✅ / ffmpeg 6.1.1 ✅ / uv ✅
@@ -124,9 +127,20 @@
 ## 8. 二期展望（只记录，不实现）
 
 - 新闻情报局：同一脱水管线换成"新闻事件 schema"，做增量关联
-- 多模态选帧：自动选"展示菜品"的最佳画面
-- ASR 支持：无字幕视频也能处理
-- 移动端 / 浏览器插件形态
+- Qwen-VL 多模态选帧 + 画面 OCR 补信息（解决"配料比例打在屏幕上"类字幕缺失）
+- 无声视频画面花字 OCR（RapidOCR → 伪字幕 → 复用现有管线，已确认需求后排）
+- 多平台支持（抖音/YouTube）+ 对应播放器
+- 低置信度卡片标记（评分 <70 前端提示）
+
+## 8.5 v0.2 前端迭代路线（设计已定稿：`docs/frontend-design.md`）
+
+- **F0** 技术债清理：前端拆分（TS + ES Modules 多文件）、domain/rules 拆分、tests/fixtures 集中
+- **F1** 菜谱库页（网格卡片 + 搜索 + 分类 + 置顶/打卡；默认首页）
+- **F2** 内嵌播放器（B站 iframe + t 参数跳转到步骤秒数）
+- **F3** 三模式详情页（浏览/做菜一步一屏/买菜全屏）+ 移动端响应式
+- **F4** PWA 离线 + 手势 + 常亮 + 暗色
+
+部署形态：电脑当服务器（局域网），手机/平板浏览器访问 + PWA 添加到主屏。
 
 ---
 
