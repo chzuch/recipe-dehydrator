@@ -51,7 +51,11 @@ class BilibiliFetcher:
 
         subtitle_file = self._find_subtitle_file(info["id"])
         if subtitle_file is None:
-            raise SubtitleNotFoundError("该视频没有可用字幕（当前版本不支持语音识别，请换有字幕的视频）")
+            raise SubtitleNotFoundError(
+                "该视频没有可用字幕（官方/AI 字幕都没有）。"
+                "当前版本不支持语音识别（SCOPE §5 边界）。"
+                "请换一个视频：B站播放页右下角「字幕」按钮可见即可用"
+            )
         raw = subtitle_file.read_text(encoding="utf-8")
         lines = parse_subtitle(raw, subtitle_file.suffix.lstrip("."))
         self._subtitles = preprocess_lines(lines)
