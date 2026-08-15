@@ -101,6 +101,24 @@ class TestPreprocessLines:
         lines = [SubtitleLine(start=0, end=1, text="嗯"), SubtitleLine(start=1, end=2, text="好")]
         assert preprocess_lines(lines) == []
 
+    def test_bgm_lyric_lines_filtered(self) -> None:
+        """B站 AI 字幕用 ♪ 标记背景音乐歌词，必须过滤（真实事故回归）。"""
+        lines = [
+            SubtitleLine(start=0, end=4, text="♪我循声而去♪"),
+            SubtitleLine(start=4, end=7, text="♪叶黄退入长何桥♪"),
+            SubtitleLine(start=7, end=10, text="切好的鸡肉下锅"),
+        ]
+        out = preprocess_lines(lines)
+        assert [line.text for line in out] == ["切好的鸡肉下锅"]
+
+    def test_music_note_variants_filtered(self) -> None:
+        lines = [
+            SubtitleLine(start=0, end=2, text="♫ 副歌部分 ♬"),
+            SubtitleLine(start=2, end=4, text="加生抽翻炒"),
+        ]
+        out = preprocess_lines(lines)
+        assert [line.text for line in out] == ["加生抽翻炒"]
+
     def test_unsorted_input_sorted(self) -> None:
         lines = [
             SubtitleLine(start=10, end=12, text="后发生的"),

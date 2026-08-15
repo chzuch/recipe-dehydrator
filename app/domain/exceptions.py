@@ -21,3 +21,7 @@ class LLMError(DehydratorError):
 
 class ValidationFailedError(DehydratorError):
     """LLM 输出未通过 L3 一致性校验，且无法自动修复。"""
+
+
+class NoCookingContentError(DehydratorError):
+    """字幕不含烹饪步骤信息（疑似全部为背景音乐歌词/无效内容），无法脱水。"""

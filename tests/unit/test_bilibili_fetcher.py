@@ -45,31 +45,32 @@ def _fetcher_with_tmp(tmp_path: Path) -> BilibiliFetcher:
     return fetcher
 
 
-class TestExtractFormat:
-    def test_with_video_uses_dash_combined_format(
+class TestExtractInfo:
+    def test_skips_download_and_requests_subtitles(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         instances = _patch_ydl(monkeypatch, _FakeYDL)
         fetcher = _fetcher_with_tmp(tmp_path)
 
-        info = fetcher._extract("https://www.bilibili.com/video/BV1xx", with_video=True)
+        info = fetcher._extract_info("https://www.bilibili.com/video/BV1xx")
 
         assert info["title"] == "测试视频"
+        assert instances[0].opts["skip_download"] is True
+        assert instances[0].opts["writeautomaticsub"] is True
+        assert "cookiefile" not in instances[0].opts  # 未配置 cookie 时不附加
+
+
+class TestDownloadVideo:
+    def test_uses_dash_combined_format(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        instances = _patch_ydl(monkeypatch, _FakeYDL)
+        fetcher = _fetcher_with_tmp(tmp_path)
+
+        fetcher._download_video("https://www.bilibili.com/video/BV1xx")
+
         assert instances[0].opts["format"] == VIDEO_FORMAT
         assert instances[0].opts["format_sort"] == ["res:480", "res:360"]
         assert instances[0].opts["merge_output_format"] == "mp4"
         assert instances[0].opts["skip_download"] is False
-
-    def test_without_video_skips_download(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        instances = _patch_ydl(monkeypatch, _FakeYDL)
-        fetcher = _fetcher_with_tmp(tmp_path)
-
-        fetcher._extract("https://www.bilibili.com/video/BV1xx", with_video=False)
-
-        assert instances[0].opts["skip_download"] is True
-        assert "format" not in instances[0].opts
 
     def test_cookiefile_attached_when_configured(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -78,30 +79,52 @@ class TestExtractFormat:
         fetcher = BilibiliFetcher(cookiefile="data/cookies.txt")
         fetcher._tmp_dir = tmp_path
 
-        fetcher._extract("https://www.bilibili.com/video/BV1xx", with_video=True)
+        fetcher._download_video("https://www.bilibili.com/video/BV1xx")
 
         assert instances[0].opts["cookiefile"] == "data/cookies.txt"
 
-    def test_no_cookiefile_when_unconfigured(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        instances = _patch_ydl(monkeypatch, _FakeYDL)
-        fetcher = _fetcher_with_tmp(tmp_path)
 
-        fetcher._extract("https://www.bilibili.com/video/BV1xx", with_video=True)
-
-        assert "cookiefile" not in instances[0].opts
-
-    async def test_download_error_translated(
+class TestFetch:
+    async def test_info_failure_translated_to_video_not_found(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         fetcher = _fetcher_with_tmp(tmp_path)
 
-        def boom(url: str, with_video: bool) -> dict[str, object]:
+        def boom(url: str) -> dict[str, object]:
             msg = "模拟 yt-dlp 失败"
             raise RuntimeError(msg)
 
-        monkeypatch.setattr(fetcher, "_extract", boom)  # 异常翻译发生在 fetch 层
+        monkeypatch.setattr(fetcher, "_extract_info", boom)
 
         with pytest.raises(VideoNotFoundError):
             await fetcher.fetch("https://www.bilibili.com/video/BV1xx")
+
+    async def test_video_download_failure_degrades_gracefully(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """视频下载失败 → 仍返回字幕（降级为无截图），不阻断脱水（真实事故回归）。"""
+        fetcher = _fetcher_with_tmp(tmp_path)
+        (tmp_path / "BV1xx.zh-Hans.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:03,000\n切鸡肉\n", encoding="utf-8"
+        )
+
+        async def noop_cleanup() -> None:
+            return None
+
+        def fake_info(url: str) -> dict[str, object]:
+            return {"id": "BV1xx", "title": "测试视频", "uploader": None, "duration": 10.0}
+
+        def boom(url: str) -> None:
+            msg = "模拟视频下载失败"
+            raise RuntimeError(msg)
+
+        monkeypatch.setattr(fetcher, "cleanup", noop_cleanup)  # 避免 fetch 删除预置字幕
+        monkeypatch.setattr("tempfile.mkdtemp", lambda prefix="": str(tmp_path))
+        monkeypatch.setattr(fetcher, "_extract_info", fake_info)
+        monkeypatch.setattr(fetcher, "_download_video", boom)
+
+        video, lines = await fetcher.fetch("https://www.bilibili.com/video/BV1xx", with_video=True)
+
+        assert video.title == "测试视频"
+        assert len(lines) == 1
+        assert lines[0].text == "切鸡肉"

@@ -6,7 +6,11 @@ from typing import Any
 
 import pytest
 from app.application.dehydrate import DehydrateUseCase
-from app.domain.exceptions import SubtitleNotFoundError, ValidationFailedError
+from app.domain.exceptions import (
+    NoCookingContentError,
+    SubtitleNotFoundError,
+    ValidationFailedError,
+)
 from app.domain.models import SubtitleLine
 
 from tests.fakes import FakeCardStore, FakeFetcher, FakeFrameExtractor, FakeLLMClient, FakeVideoInfo
@@ -135,3 +139,12 @@ class TestDehydratePipeline:
         _, recipe = await usecase.run("BV1xx")
         assert len(llm.calls) == 2
         assert recipe.title == "红烧牛肉"
+
+    @pytest.mark.asyncio
+    async def test_empty_steps_raises_no_cooking_content(self) -> None:
+        """LLM 判定字幕无烹饪内容（如全是 BGM 歌词）→ NoCookingContentError，不重试。"""
+        llm = FakeLLMClient([{"title": "", "steps": [], "ingredients": [], "tools": [], "tips": []}])
+        usecase, _, _, _ = _make_usecase(llm)
+        with pytest.raises(NoCookingContentError):
+            await usecase.run("BV1xx")
+        assert len(llm.calls) == 1  # 不重试

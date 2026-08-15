@@ -47,7 +47,7 @@ class BilibiliFetcher:
         await self.cleanup()
         self._tmp_dir = Path(tempfile.mkdtemp(prefix=_TMP_PREFIX))
         try:
-            info = await asyncio.to_thread(self._extract, url, with_video)
+            info = await asyncio.to_thread(self._extract_info, url)
         except Exception as exc:  # yt-dlp 的异常体系杂，统一翻译
             raise VideoNotFoundError(f"视频抓取失败: {exc}") from exc
 
@@ -67,6 +67,13 @@ class BilibiliFetcher:
             len(self._subtitles),
         )
 
+        # 视频下载与字幕解耦：下载失败仅降级为「无截图」，不阻断脱水
+        if with_video:
+            try:
+                await asyncio.to_thread(self._download_video, url)
+            except Exception as exc:
+                logger.warning("视频下载失败，跳过抽帧（不影响脱水）: %s", exc)
+
         video = VideoInfoImpl(
             url=url,
             title=str(info.get("title", "")),
@@ -75,24 +82,21 @@ class BilibiliFetcher:
         )
         return video, list(self._subtitles)
 
-    def _extract(self, url: str, with_video: bool) -> dict[str, Any]:
+    def _extract_info(self, url: str) -> dict[str, Any]:
+        """第一步：拿视频信息 + 字幕（不下载媒体）。"""
         from yt_dlp import YoutubeDL  # 延迟导入，避免 CLI 无 yt-dlp 时 import 失败
 
         assert self._tmp_dir is not None
         opts: dict[str, Any] = {
             "quiet": True,
             "no_warnings": True,
-            "skip_download": not with_video,
+            "skip_download": True,
             "writesubtitles": True,
             "writeautomaticsub": True,
             "subtitleslangs": list(PREFERRED_LANGS),
             "subtitlesformat": "json3/best",
             "outtmpl": str(self._tmp_dir / "%(id)s"),
         }
-        if with_video:
-            opts["format"] = VIDEO_FORMAT
-            opts["format_sort"] = VIDEO_FORMAT_SORT
-            opts["merge_output_format"] = "mp4"
         if self._cookiefile:
             # B站字幕（含 AI 字幕）需登录 cookie 才返回（已实测确认）
             opts["cookiefile"] = self._cookiefile
@@ -102,6 +106,25 @@ class BilibiliFetcher:
                 msg = "yt-dlp 未返回视频信息"
                 raise VideoNotFoundError(msg)
             return info
+
+    def _download_video(self, url: str) -> None:
+        """第二步：下载低清视频供抽帧（失败由调用方降级处理）。"""
+        from yt_dlp import YoutubeDL  # 延迟导入
+
+        assert self._tmp_dir is not None
+        opts: dict[str, Any] = {
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": False,
+            "format": VIDEO_FORMAT,
+            "format_sort": VIDEO_FORMAT_SORT,
+            "merge_output_format": "mp4",
+            "outtmpl": str(self._tmp_dir / "%(id)s"),
+        }
+        if self._cookiefile:
+            opts["cookiefile"] = self._cookiefile
+        with YoutubeDL(opts) as ydl:
+            ydl.extract_info(url, download=True)
 
     def _find_subtitle_file(self, video_id: str) -> Path | None:
         if self._tmp_dir is None:

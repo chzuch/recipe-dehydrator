@@ -19,6 +19,7 @@ from app.application.dehydrate import DehydrateUseCase
 from app.domain.exceptions import (
     DehydratorError,
     LLMError,
+    NoCookingContentError,
     SubtitleNotFoundError,
     ValidationFailedError,
     VideoNotFoundError,
@@ -32,6 +33,7 @@ from app.infrastructure.sqlite_store import SQLiteCardStore
 _EXCEPTION_STATUS: dict[type[DehydratorError], int] = {
     VideoNotFoundError: 404,
     SubtitleNotFoundError: 422,
+    NoCookingContentError: 422,
     ValidationFailedError: 422,
     LLMError: 502,
 }

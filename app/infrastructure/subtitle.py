@@ -29,6 +29,8 @@ _FLAFFY_RE = re.compile(
 )
 # 整句就是语气词的才过滤；禁止子串匹配（「好香啊」会被「啊」误伤）
 _FILLER_LINES = {"嗯", "呃", "啊", "哦", "好的", "那好", "对", "嗯嗯", "对对", "好嘞", "对啦"}
+# B站 AI 字幕用音符符号标记背景音乐（BGM）歌词行，必须过滤
+_BGM_RE = re.compile(r"[♪♫♬]")
 _ENDING_RE = re.compile(r"[。！？!?…]$")
 _MERGE_GAP_SEC = 0.5  # 相邻字幕 gap 小于此值视为断句，可合并
 _MERGE_MAX_PREV_LEN = 10  # 前句短于此字数才允许合并：AI 字幕无标点，长句合并会吞掉时间分辨率
@@ -115,10 +117,14 @@ def _is_flaffy(text: str) -> bool:
     return bool(_FLAFFY_RE.search(text)) or len(text) <= 1 or text in _FILLER_LINES
 
 
+def _is_bgm(text: str) -> bool:
+    return bool(_BGM_RE.search(text))
+
+
 def preprocess_lines(lines: list[SubtitleLine]) -> list[SubtitleLine]:
     """L1 预处理：按时间顺序 过滤闲话 → 去重 → 合并断句。"""
     ordered = sorted(lines, key=lambda line: (line.start, line.end))
-    filtered = [line for line in ordered if not _is_flaffy(line.text)]
+    filtered = [line for line in ordered if not _is_flaffy(line.text) and not _is_bgm(line.text)]
 
     # 去重：连续重复（UP主强调）只保留第一条，必须在合并之前做
     deduped: list[SubtitleLine] = []

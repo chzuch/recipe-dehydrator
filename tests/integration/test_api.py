@@ -72,6 +72,15 @@ class TestDehydrateApi:
         resp = client.post("/api/dehydrate", json={"url": "BV1xx"})
         assert resp.status_code == 422
 
+    def test_dehydrate_bgm_lyrics_maps_to_422(self) -> None:
+        """LLM 判定无烹饪内容（BGM 歌词）→ 422。"""
+        client = _make_client(
+            llm=FakeLLMClient([{"title": "", "steps": [], "ingredients": [], "tools": [], "tips": []}])
+        )
+        resp = client.post("/api/dehydrate", json={"url": "BV1xx"})
+        assert resp.status_code == 422
+        assert "背景音乐" in resp.json()["detail"]
+
 
 class TestCardsApi:
     def test_crud_roundtrip(self) -> None:

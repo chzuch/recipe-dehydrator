@@ -16,7 +16,12 @@ from app.application.prompts import (
     build_retry_prompt,
     build_split_prompt,
 )
-from app.domain.exceptions import LLMError, SubtitleNotFoundError, ValidationFailedError
+from app.domain.exceptions import (
+    LLMError,
+    NoCookingContentError,
+    SubtitleNotFoundError,
+    ValidationFailedError,
+)
 from app.domain.models import Recipe, SubtitleLine
 from app.domain.ports import CardStore, Fetcher, FrameExtractor, LLMClient
 from app.domain.rules import validate_recipe
@@ -87,9 +92,16 @@ class DehydrateUseCase:
                         build_retry_prompt(lines, last_json, self._last_error_messages),
                     )
                 last_json = raw if isinstance(raw, str) else repr(raw)
+                if isinstance(raw, dict) and not raw.get("steps"):
+                    # LLM 判定字幕无烹饪内容（如全是 BGM 歌词），不重试
+                    raise NoCookingContentError(
+                        "该视频字幕疑似为背景音乐歌词或无效内容，没有可提取的烹饪步骤"
+                    )
                 recipe = Recipe.model_validate(raw)
             except LLMError:
                 # LLM 调用失败（网络/限流）不重试，直接冒泡 → api 层映射 502
+                raise
+            except NoCookingContentError:
                 raise
             except (ValidationError, ValueError) as exc:
                 # 输出不可解析：携带问题重试一次
