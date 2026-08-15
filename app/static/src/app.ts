@@ -1,14 +1,42 @@
-/** 应用入口：路由分发、脱水触发。 */
+/** 应用入口：路由分发、脱水触发、模式切换。 */
 
 import { api } from "./api";
 import { navigate, onRouteChange } from "./router";
+import { getCurrentCard } from "./state";
 import { renderCard } from "./views/card";
+import { bindCookEvents, enterCookMode, exitCookMode } from "./views/cook";
 import { bindLibraryEvents, renderLibrary } from "./views/library";
+import { enterShopMode, exitShopMode } from "./views/shop";
 
 const $ = (s: string): HTMLElement => document.querySelector(s) as HTMLElement;
 
+let currentCardId = "";
+let currentMode = "browse";
+
 function setStatus(t: string): void {
   $("#status").textContent = t;
+}
+
+function switchMode(mode: string): void {
+  if (mode === currentMode) return;
+  currentMode = mode;
+  document.querySelectorAll<HTMLElement>(".mode-tab").forEach((el) => {
+    el.classList.toggle("active", el.dataset.mode === mode);
+  });
+  ($("#browse-view") as HTMLElement).hidden = mode !== "browse";
+  ($("#cook-view") as HTMLElement).hidden = mode !== "cook";
+  ($("#shop-view") as HTMLElement).hidden = mode !== "shop";
+  if (mode !== "cook") exitCookMode();
+  if (mode !== "shop") exitShopMode();
+  const card = getCurrentCard();
+  if (mode === "cook" && card) enterCookMode(card.recipe, card.id);
+  if (mode === "shop" && card) enterShopMode(card.recipe);
+}
+
+function bindModeTabs(): void {
+  document.querySelectorAll<HTMLElement>(".mode-tab").forEach((el) => {
+    el.addEventListener("click", () => switchMode(el.dataset.mode ?? "browse"));
+  });
 }
 
 async function go(): Promise<void> {
@@ -37,14 +65,27 @@ async function go(): Promise<void> {
 }
 
 async function showCard(id: string): Promise<void> {
+  currentCardId = id;
+  currentMode = "browse";
+  document.querySelectorAll<HTMLElement>(".mode-tab").forEach((el) => {
+    el.classList.toggle("active", el.dataset.mode === "browse");
+  });
   ($("#library") as HTMLElement).hidden = true;
   ($("#card-view") as HTMLElement).hidden = false;
+  ($("#browse-view") as HTMLElement).hidden = false;
+  ($("#cook-view") as HTMLElement).hidden = true;
+  ($("#shop-view") as HTMLElement).hidden = true;
+  exitCookMode();
+  exitShopMode();
   const data = await api.getCard(id);
   if (data) renderCard(data.recipe, data.id);
   else setStatus("❌ 卡片不存在");
 }
 
 async function showLibrary(): Promise<void> {
+  ($("#card-view") as HTMLElement).hidden = true;
+  exitCookMode();
+  exitShopMode();
   await renderLibrary();
 }
 
@@ -54,6 +95,8 @@ function main(): void {
     if ((e as KeyboardEvent).key === "Enter") void go();
   });
   $("#back-to-library").addEventListener("click", () => navigate({ name: "library" }));
+  bindModeTabs();
+  bindCookEvents();
   bindLibraryEvents();
   onRouteChange((route) => {
     if (route.name === "card") void showCard(route.id);
@@ -61,4 +104,7 @@ function main(): void {
   });
 }
 
+// 引入避免未使用告警
+void currentCardId;
 main();
+

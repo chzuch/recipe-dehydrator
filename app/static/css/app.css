@@ -69,3 +69,53 @@ details.opt-group summary:hover { color: var(--accent); }
 /* ---- 内嵌播放器（F2） ---- */
 #player-wrap { margin: 12px 0; border: 1px solid #eee; border-radius: 12px; overflow: hidden; }
 .btn-play { background: var(--accent); color: #fff; font-size: 12px; padding: 6px 12px; border-radius: 20px; margin-top: 6px; }
+
+/* ---- 三模式（F3） ---- */
+.mode-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.mode-tab { flex: 1; padding: 12px; font-size: 15px; border-radius: 10px; background: #f3efe8; }
+.mode-tab.active { background: var(--accent); color: #fff; font-weight: 700; }
+
+/* 做菜模式 */
+#cook-view { padding-bottom: 20px; }
+.cook-ing-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.cook-ing { background: #f3efe8; border-radius: 20px; padding: 3px 10px; font-size: 13px; }
+.cook-progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+#cook-counter { font-size: 14px; color: var(--muted); white-space: nowrap; }
+.cook-progress-track { flex: 1; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+.cook-progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .2s; }
+.cook-stepbar { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; }
+.step-dot { width: 34px; height: 34px; border-radius: 50%; background: #eee; font-weight: 700; flex-shrink: 0; }
+.step-dot.active { background: var(--accent); color: #fff; }
+#cook-step { text-align: center; }
+.cook-phase { color: var(--accent); font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+.cook-title { font-size: 34px; font-weight: 800; margin-bottom: 14px; }
+.cook-media img { max-width: 100%; border-radius: 12px; margin-bottom: 14px; }
+.cook-desc { font-size: 24px; line-height: 1.6; margin-bottom: 12px; }
+.cook-done { font-size: 20px; color: #2e7d32; font-weight: 700; margin-bottom: 8px; }
+.cook-tip { font-size: 17px; color: #b26a00; margin-bottom: 16px; }
+.cook-nav { display: flex; gap: 12px; margin-top: 20px; }
+.cook-nav-btn { flex: 1; padding: 18px; font-size: 20px; border-radius: 12px; min-height: 60px; }
+
+/* 买菜模式 */
+#shop-view { padding-bottom: 20px; }
+.shop-title { font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+.shop-cat { margin-bottom: 10px; }
+.shop-item { display: flex; align-items: center; gap: 12px; padding: 14px 6px; border-bottom: 1px dashed #eee; font-size: 17px; }
+.shop-item input[type="checkbox"] { width: 26px; height: 26px; flex-shrink: 0; }
+.shop-item.done { opacity: .45; text-decoration: line-through; }
+.shop-item .amount { margin-left: auto; color: var(--muted); }
+.shop-done { margin-top: 12px; color: var(--muted); font-size: 13px; }
+
+/* ---- 移动端响应式 ---- */
+@media (max-width: 768px) {
+  .cook-title { font-size: 26px; }
+  .cook-desc { font-size: 19px; }
+  .cook-done { font-size: 17px; }
+  .cook-nav-btn { padding: 14px; font-size: 16px; min-height: 52px; }
+  .side { display: none; } /* 手机隐藏侧边栏（买菜清单在买菜模式） */
+}
+@media (max-width: 480px) {
+  .lib-grid { grid-template-columns: repeat(2, 1fr); }
+  .topbar { flex-wrap: wrap; }
+  #url { min-width: 100%; }
+}

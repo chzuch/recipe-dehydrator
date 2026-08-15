@@ -36,7 +36,28 @@
   <div class="container">
     <div class="main panel">
       <button id="back-to-library" style="margin-bottom:10px">← 返回菜谱库</button>
-      <div id="card"></div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="browse">📖 浏览</button>
+        <button class="mode-tab" data-mode="cook">🍳 做菜</button>
+        <button class="mode-tab" data-mode="shop">🛒 买菜</button>
+      </div>
+      <div id="browse-view"><div id="card"></div></div>
+      <div id="cook-view" hidden>
+        <div class="cook-top">
+          <div id="cook-ingredients" class="cook-ing-bar"></div>
+          <div class="cook-progress-row">
+            <span id="cook-counter">步骤 1/1</span>
+            <div class="cook-progress-track"><div id="cook-progress" class="cook-progress-fill"></div></div>
+          </div>
+          <div id="cook-stepbar" class="cook-stepbar"></div>
+        </div>
+        <div id="cook-step"></div>
+        <div class="cook-nav">
+          <button id="cook-prev" class="cook-nav-btn">◀ 上一步</button>
+          <button id="cook-next" class="cook-nav-btn primary">下一步 ▶</button>
+        </div>
+      </div>
+      <div id="shop-view" hidden></div>
     </div>
     <div class="side">
       <div class="panel">
