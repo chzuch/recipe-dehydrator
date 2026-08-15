@@ -15,22 +15,38 @@
   </label>
   <button id="btn-go" class="primary">脱水</button>
 </div>
-<div class="container">
-  <div class="main panel" id="main">
-    <div class="empty" id="empty-hint">粘贴一个 B站做饭视频链接，点「脱水」，把视频变成能照着做的菜谱卡。</div>
-    <div id="card" hidden></div>
-  </div>
-  <div class="side">
-    <div class="panel">
-      <h3>🛒 买菜清单</h3>
-      <div id="shopping" class="empty" style="padding:10px">脱水后自动生成</div>
+
+<div id="library" class="container">
+  <div class="main panel">
+    <div class="lib-toolbar">
+      <h2>📖 我的菜谱库</h2>
+      <input id="lib-search" type="text" placeholder="🔍 搜菜名或食材…" />
+      <select id="lib-category"></select>
+      <select id="lib-sort">
+        <option value="pinned">置顶优先</option>
+        <option value="recent">最近做过</option>
+        <option value="newest">最新</option>
+      </select>
     </div>
-    <div class="panel">
-      <h3>📚 历史卡片</h3>
-      <div id="history"><div class="empty">还没有卡片</div></div>
+    <div id="lib-grid"></div>
+  </div>
+</div>
+
+<div id="card-view" hidden>
+  <div class="container">
+    <div class="main panel">
+      <button id="back-to-library" style="margin-bottom:10px">← 返回菜谱库</button>
+      <div id="card"></div>
+    </div>
+    <div class="side">
+      <div class="panel">
+        <h3>🛒 买菜清单</h3>
+        <div id="shopping" class="empty" style="padding:10px">脱水后自动生成</div>
+      </div>
     </div>
   </div>
 </div>
+
 <div id="status" class="status" style="text-align:center"></div>
 <script type="module" src="/static/dist/app.js"></script>
 </body>

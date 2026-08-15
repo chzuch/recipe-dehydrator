@@ -39,6 +39,9 @@ export interface Recipe {
   steps: Step[];
   tips: string[];
   warnings: string[];
+  pinned: boolean;
+  cooked_count: number;
+  last_cooked_at: string | null;
 }
 
 export interface CardEntry {

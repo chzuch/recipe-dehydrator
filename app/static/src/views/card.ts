@@ -124,6 +124,8 @@ export function renderCard(recipe: Recipe, cardId: string): void {
       )
       .join("") || '<div class="empty">无步骤</div>'}
     <div class="row-actions">
+      <button id="btn-cook">🍳 今天做了</button>
+      <button id="btn-pin">${recipe.pinned ? "📌 取消置顶" : "📌 置顶"}</button>
       <button id="btn-edit">✏️ 编辑</button>
       <button id="btn-delete" style="color:#c0392b">🗑 删除</button>
     </div>`;
@@ -140,8 +142,32 @@ function bindCardActions(): void {
       if (card) renderShopping(card.recipe);
     });
   });
+  $("#btn-cook")?.addEventListener("click", cookCard);
+  $("#btn-pin")?.addEventListener("click", pinCard);
   $("#btn-edit")?.addEventListener("click", editMode);
   $("#btn-delete")?.addEventListener("click", deleteCard);
+}
+
+async function cookCard(): Promise<void> {
+  const card = getCurrentCard();
+  if (!card) return;
+  try {
+    const data = await api.cookCard(card.id);
+    if (data) renderCard(data.recipe, data.id);
+  } catch (e) {
+    alert("打卡失败：" + (e as Error).message);
+  }
+}
+
+async function pinCard(): Promise<void> {
+  const card = getCurrentCard();
+  if (!card) return;
+  try {
+    const data = await api.pinCard(card.id);
+    if (data) renderCard(data.recipe, data.id);
+  } catch (e) {
+    alert("置顶失败：" + (e as Error).message);
+  }
 }
 
 /** 买菜清单：只含「需要购买」的分类，核心优先，已勾选的「家中已有」不显示 */

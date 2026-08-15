@@ -111,3 +111,58 @@ class TestCardsApi:
     def test_frame_path_traversal_blocked(self) -> None:
         client = _make_client()
         assert client.get("/api/frames/..%2F..%2Fetc%2Fpasswd").status_code == 404
+
+
+class TestLibraryApi:
+    def test_cook_card_increments_count(self) -> None:
+        client = _make_client()
+        card_id = client.post("/api/dehydrate", json={"url": "BV1xx"}).json()["card_id"]
+
+        resp = client.post(f"/api/cards/{card_id}/cook")
+        assert resp.status_code == 200
+        recipe = resp.json()["recipe"]
+        assert recipe["cooked_count"] == 1
+        assert recipe["last_cooked_at"] is not None
+
+        again = client.post(f"/api/cards/{card_id}/cook").json()["recipe"]
+        assert again["cooked_count"] == 2
+
+    def test_pin_toggles(self) -> None:
+        client = _make_client()
+        card_id = client.post("/api/dehydrate", json={"url": "BV1xx"}).json()["card_id"]
+
+        resp = client.post(f"/api/cards/{card_id}/pin")
+        assert resp.json()["recipe"]["pinned"] is True
+        again = client.post(f"/api/cards/{card_id}/pin").json()["recipe"]
+        assert again["pinned"] is False
+
+    def test_cook_missing_card_404(self) -> None:
+        client = _make_client()
+        assert client.post("/api/cards/nope/cook").status_code == 404
+        assert client.post("/api/cards/nope/pin").status_code == 404
+
+    def test_search_by_title_and_ingredient(self) -> None:
+        client = _make_client()
+        client.post("/api/dehydrate", json={"url": "BV1xx"})  # 红烧牛肉（牛腩肉）
+
+        by_title = client.get("/api/cards", params={"q": "红烧"}).json()
+        assert len(by_title) == 1
+        by_ing = client.get("/api/cards", params={"q": "牛腩"}).json()
+        assert len(by_ing) == 1
+        assert client.get("/api/cards", params={"q": "不存在"}).json() == []
+
+    def test_filter_by_main_ingredient(self) -> None:
+        client = _make_client()
+        client.post("/api/dehydrate", json={"url": "BV1xx"})  # 主料=牛腩肉
+
+        assert len(client.get("/api/cards", params={"category": "牛腩"}).json()) == 1
+        assert len(client.get("/api/cards", params={"category": "鸡肉"}).json()) == 0
+
+    def test_sort_pinned_first(self) -> None:
+        client = _make_client(llm=FakeLLMClient([SAMPLE_RECIPE, SAMPLE_RECIPE]))
+        id1 = client.post("/api/dehydrate", json={"url": "BV1xx"}).json()["card_id"]
+        client.post("/api/dehydrate", json={"url": "BV1yy"})  # 第二张
+        client.post(f"/api/cards/{id1}/pin")
+
+        listed = client.get("/api/cards", params={"sort": "pinned"}).json()
+        assert listed[0]["id"] == id1

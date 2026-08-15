@@ -43,8 +43,33 @@ async def api_dehydrate(req: DehydrateRequest, request: Request) -> dict[str, An
 
 
 @router.get("/api/cards")
-async def api_list_cards(request: Request) -> list[dict[str, Any]]:
-    return [{"id": card_id, "recipe": recipe} for card_id, recipe in await _services(request).cards.list_cards()]
+async def api_list_cards(
+    request: Request,
+    q: str | None = None,
+    category: str | None = None,
+    sort: str = "pinned",
+) -> list[dict[str, Any]]:
+    cards = await _services(request).cards.list_cards()
+    cards = CardsUseCase.search_cards(cards, q)
+    cards = CardsUseCase.filter_by_main_ingredient(cards, category)
+    cards = CardsUseCase.sort_cards(cards, sort)
+    return [{"id": card_id, "recipe": recipe} for card_id, recipe in cards]
+
+
+@router.post("/api/cards/{card_id}/cook")
+async def api_cook_card(card_id: str, request: Request) -> dict[str, Any]:
+    recipe = await _services(request).cards.cook_card(card_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail=f"卡片不存在: {card_id}")
+    return {"id": card_id, "recipe": recipe}
+
+
+@router.post("/api/cards/{card_id}/pin")
+async def api_pin_card(card_id: str, request: Request) -> dict[str, Any]:
+    recipe = await _services(request).cards.pin_card(card_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail=f"卡片不存在: {card_id}")
+    return {"id": card_id, "recipe": recipe}
 
 
 @router.get("/api/cards/{card_id}")

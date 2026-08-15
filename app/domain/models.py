@@ -67,6 +67,9 @@ class Recipe(BaseModel):
     steps: list[Step] = Field(default_factory=list)
     tips: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list, description="L3 校验产生的告警，展示给用户")
+    pinned: bool = Field(default=False, description="是否置顶（菜谱库）")
+    cooked_count: int = Field(default=0, ge=0, description="做过次数（打卡）")
+    last_cooked_at: str | None = Field(default=None, description="上次做过时间（ISO 格式）")
 
     @model_validator(mode="after")
     def _check_steps_indexed(self) -> Recipe:

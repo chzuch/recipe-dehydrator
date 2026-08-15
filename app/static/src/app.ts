@@ -1,7 +1,9 @@
-/** 应用入口：事件绑定、脱水触发、历史列表。 */
+/** 应用入口：路由分发、脱水触发。 */
 
 import { api } from "./api";
-import { esc, renderCard } from "./views/card";
+import { navigate, onRouteChange } from "./router";
+import { renderCard } from "./views/card";
+import { bindLibraryEvents, renderLibrary } from "./views/library";
 
 const $ = (s: string): HTMLElement => document.querySelector(s) as HTMLElement;
 
@@ -22,9 +24,10 @@ async function go(): Promise<void> {
   try {
     const withGif = ($("#with-gif") as HTMLInputElement).checked;
     const data = await api.dehydrate(url, true, withGif);
-    if (data) renderCard(data.recipe, data.card_id);
-    await loadHistory();
-    setStatus("✅ 完成");
+    if (data) {
+      navigate({ name: "card", id: data.card_id });
+      setStatus("✅ 完成");
+    }
   } catch (e) {
     setStatus("❌ " + (e as Error).message);
   } finally {
@@ -33,35 +36,16 @@ async function go(): Promise<void> {
   }
 }
 
-async function loadHistory(): Promise<void> {
-  try {
-    const list = await api.cards();
-    $("#history").innerHTML = list?.length
-      ? list
-          .map(
-            ({ id, recipe }) => `
-      <div class="history-item" data-card-id="${esc(id)}">
-        <div>${esc(recipe.title)}</div>
-        <div class="sub">${(recipe.steps || []).length} 步 · ${esc(recipe.uploader || "")}</div>
-      </div>`,
-          )
-          .join("")
-      : '<div class="empty">还没有卡片</div>';
-    document.querySelectorAll<HTMLElement>(".history-item").forEach((el) => {
-      el.addEventListener("click", () => void openCard(el.dataset.cardId ?? ""));
-    });
-  } catch {
-    /* 历史加载失败不阻断页面 */
-  }
+async function showCard(id: string): Promise<void> {
+  ($("#library") as HTMLElement).hidden = true;
+  ($("#card-view") as HTMLElement).hidden = false;
+  const data = await api.getCard(id);
+  if (data) renderCard(data.recipe, data.id);
+  else setStatus("❌ 卡片不存在");
 }
 
-async function openCard(id: string): Promise<void> {
-  try {
-    const data = await api.getCard(id);
-    if (data) renderCard(data.recipe, data.id);
-  } catch (e) {
-    alert((e as Error).message);
-  }
+async function showLibrary(): Promise<void> {
+  await renderLibrary();
 }
 
 function main(): void {
@@ -69,8 +53,12 @@ function main(): void {
   $("#url").addEventListener("keydown", (e) => {
     if ((e as KeyboardEvent).key === "Enter") void go();
   });
-  window.addEventListener("card-updated", () => void loadHistory());
-  void loadHistory();
+  $("#back-to-library").addEventListener("click", () => navigate({ name: "library" }));
+  bindLibraryEvents();
+  onRouteChange((route) => {
+    if (route.name === "card") void showCard(route.id);
+    else void showLibrary();
+  });
 }
 
 main();
