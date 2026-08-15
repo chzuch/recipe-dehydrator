@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 
 _SUBTITLE_EXTS = (".json3", ".json", ".vtt", ".srt")
 _TMP_PREFIX = "vdh-fetch-"
+# B站是 DASH 音视频分离：单格式选择器（best 等）必然失败，
+# 必须用 bv*+ba 组合语法（已用真实视频实测，勿改回单格式写法）。
+VIDEO_FORMAT = "bv*[height<=360]+ba/b"
 
 
 class VideoInfoImpl(BaseModel):
@@ -81,7 +84,8 @@ class BilibiliFetcher:
             "outtmpl": str(self._tmp_dir / "%(id)s"),
         }
         if with_video:
-            opts["format"] = "best[height<=360]/best"
+            opts["format"] = VIDEO_FORMAT
+            opts["merge_output_format"] = "mp4"
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
             if not isinstance(info, dict):
