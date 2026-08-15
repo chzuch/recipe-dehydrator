@@ -70,7 +70,13 @@ export function renderCard(recipe: Recipe, cardId: string): void {
       ${recipe.servings ? `<span>份量：${esc(recipe.servings)}</span>` : ""}
       ${recipe.total_time ? `<span>耗时：${esc(recipe.total_time)}</span>` : ""}
       ${recipe.uploader ? `<span>UP：${esc(recipe.uploader)}</span>` : ""}
+      ${recipe.cooked_count > 0 ? `<span>🍳 做过 ${recipe.cooked_count} 次</span>` : ""}
       ${recipe.source_url ? `<a href="${esc(recipe.source_url)}" target="_blank">原视频</a>` : ""}
+    </div>
+    <div id="player-wrap" hidden>
+      <iframe id="bili-player" width="100%" height="360" frameborder="0" scrolling="no"
+        allowfullscreen="true" title="原视频"></iframe>
+      <button id="player-close" style="margin-top:6px">收起播放器</button>
     </div>
     ${(recipe.warnings || []).map((w) => `<div class="warn">⚠️ ${esc(w)}</div>`).join("")}
     <div class="cols">
@@ -116,7 +122,7 @@ export function renderCard(recipe: Recipe, cardId: string): void {
           ${s.tip ? `<div class="tip">⚠️ ${esc(s.tip)}</div>` : ""}
           ${s.frame_path ? `<img src="/api/frames/${encodeURIComponent(s.frame_path)}" alt="步骤${s.index}">` : ""}
           ${s.gif_path ? `<img class="gif" src="/api/frames/${encodeURIComponent(s.gif_path)}" alt="步骤${s.index}动作演示">` : ""}
-          ${recipe.source_url ? `<a class="watch" href="${esc(recipe.source_url)}?t=${Math.round(s.start_sec)}" target="_blank">▶ 看原视频 ${fmt(s.start_sec)}</a>` : ""}
+          ${recipe.source_url ? `<button class="watch btn-play" data-sec="${Math.round(s.start_sec)}">▶ 页内播放 ${fmt(s.start_sec)}</button>` : ""}
         </div>
       </div>`,
         )
@@ -146,6 +152,34 @@ function bindCardActions(): void {
   $("#btn-pin")?.addEventListener("click", pinCard);
   $("#btn-edit")?.addEventListener("click", editMode);
   $("#btn-delete")?.addEventListener("click", deleteCard);
+  $("#player-close")?.addEventListener("click", () => {
+    const wrap = $("#player-wrap") as HTMLElement;
+    wrap.hidden = true;
+    const iframe = $("#bili-player") as HTMLIFrameElement;
+    iframe.src = "";
+  });
+  document.querySelectorAll<HTMLElement>(".btn-play").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const card = getCurrentCard();
+      if (!card?.recipe.source_url) return;
+      const sec = Number(btn.dataset.sec ?? 0);
+      const bvid = extractBvid(card.recipe.source_url);
+      if (!bvid) {
+        window.open(`${card.recipe.source_url}?t=${sec}`, "_blank");
+        return;
+      }
+      const iframe = $("#bili-player") as HTMLIFrameElement;
+      iframe.src = `https://player.bilibili.com/player.html?bvid=${bvid}&page=1&t=${sec}&autoplay=1&high_quality=1`;
+      ($("#player-wrap") as HTMLElement).hidden = false;
+      ($("#player-wrap") as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+}
+
+/** 从 B站链接提取 BV 号 */
+function extractBvid(url: string): string | null {
+  const m = url.match(/\/video\/(BV[0-9A-Za-z]+)/);
+  return m ? m[1] : null;
 }
 
 async function cookCard(): Promise<void> {
