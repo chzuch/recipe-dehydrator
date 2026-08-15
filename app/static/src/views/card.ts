@@ -72,12 +72,16 @@ export function renderCard(recipe: Recipe, cardId: string): void {
       ${recipe.total_time ? `<span>耗时：${esc(recipe.total_time)}</span>` : ""}
       ${recipe.uploader ? `<span>UP：${esc(recipe.uploader)}</span>` : ""}
       ${recipe.cooked_count > 0 ? `<span>🍳 做过 ${recipe.cooked_count} 次</span>` : ""}
-      ${recipe.source_url ? `<a href="${esc(recipe.source_url)}" target="_blank">原视频</a>` : ""}
+      ${recipe.source_url ? `<button class="btn-play" data-sec="0">▶ 播放原视频</button>` : ""}
     </div>
     <div id="player-wrap" hidden>
-      <iframe id="bili-player" width="100%" height="360" frameborder="0" scrolling="no"
-        allowfullscreen="true" title="原视频"></iframe>
-      <button id="player-close" style="margin-top:6px">收起播放器</button>
+      <div class="player-bar">
+        <span class="player-title">▶ 原视频片段</span>
+        <button id="player-close" class="player-close" title="关闭播放器">✕ 收起</button>
+      </div>
+      <div class="player-frame">
+        <iframe id="bili-player" frameborder="0" scrolling="no" allowfullscreen="true" title="原视频"></iframe>
+      </div>
     </div>
     ${(recipe.warnings || []).map((w) => `<div class="warn">⚠️ ${esc(w)}</div>`).join("")}
     <div class="cols">
@@ -166,7 +170,8 @@ function bindCardActions(): void {
       const sec = Number(btn.dataset.sec ?? 0);
       const bvid = extractBvid(card.recipe.source_url);
       if (!bvid) {
-        window.open(`${card.recipe.source_url}?t=${sec}`, "_blank");
+        // 无法解析 BV 号时也留在页内，提示而非跳转外链
+        alert("无法从链接解析视频编号，无法在页内播放");
         return;
       }
       const iframe = $("#bili-player") as HTMLIFrameElement;
@@ -177,10 +182,10 @@ function bindCardActions(): void {
   });
 }
 
-/** 从 B站链接提取 BV 号 */
+/** 从 B站链接任意位置提取 BV 号（兼容带参数/裸 BV 号） */
 function extractBvid(url: string): string | null {
-  const m = url.match(/\/video\/(BV[0-9A-Za-z]+)/);
-  return m ? m[1] : null;
+  const m = url.match(/BV[0-9A-Za-z]{8,}/);
+  return m ? m[0] : null;
 }
 
 async function cookCard(): Promise<void> {
