@@ -83,7 +83,7 @@ export function renderCard(recipe: Recipe, cardId: string): void {
         <iframe id="bili-player" frameborder="0" scrolling="no" allowfullscreen="true" title="原视频"></iframe>
       </div>
     </div>
-    ${(recipe.warnings || []).map((w) => `<div class="warn">⚠️ ${esc(w)}</div>`).join("")}
+    ${(recipe.warnings || []).slice(0, 1).map((w) => `<div class="warn">⚠️ ${esc(w)}</div>`).join("")}
     <div class="cols">
       <div>
         <h3>🥬 食材</h3>
