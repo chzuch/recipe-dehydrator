@@ -119,3 +119,25 @@ details.opt-group summary:hover { color: var(--accent); }
   .topbar { flex-wrap: wrap; }
   #url { min-width: 100%; }
 }
+
+/* ---- 暗色模式（F4） ---- */
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1b1a18; --card: #262420; --muted: #9a9488; }
+  body { color: #e8e4dc; }
+  .topbar, .panel, .lib-card { background: var(--card); border-color: #35332e; }
+  #url { background: #2e2c27; color: #e8e4dc; border-color: #444; }
+  .tool { background: #33312c; }
+  .step { border-color: #33312c; }
+  .history-item { border-color: #33312c; }
+  .history-item:hover { background: #2e2c27; }
+  .step-dot { background: #33312c; }
+  .lib-cover { background: #2e2c27; }
+}
+html[data-theme="dark"] {
+  --bg: #1b1a18; --card: #262420; --muted: #9a9488;
+}
+html[data-theme="dark"] body { color: #e8e4dc; }
+html[data-theme="dark"] .topbar, html[data-theme="dark"] .panel, html[data-theme="dark"] .lib-card { background: var(--card); border-color: #35332e; }
+html[data-theme="dark"] #url { background: #2e2c27; color: #e8e4dc; border-color: #444; }
+html[data-theme="dark"] .tool, html[data-theme="dark"] .step-dot, html[data-theme="dark"] .lib-cover { background: #33312c; }
+html[data-theme="dark"] .step { border-color: #33312c; }

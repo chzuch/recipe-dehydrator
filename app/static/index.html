@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>视频脱水机</title>
 <link rel="stylesheet" href="/static/css/app.css">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#e65c41">
+<meta name="apple-mobile-web-app-capable" content="yes">
 </head>
 <body>
 <div class="topbar">
@@ -13,6 +16,7 @@
   <label style="font-size:13px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:4px">
     <input type="checkbox" id="with-gif"> 生成GIF
   </label>
+  <button id="btn-theme" title="切换深浅色">🌓</button>
   <button id="btn-go" class="primary">脱水</button>
 </div>
 
@@ -70,5 +74,11 @@
 
 <div id="status" class="status" style="text-align:center"></div>
 <script type="module" src="/static/dist/app.js"></script>
+<script>
+  // Service Worker 注册（PWA 离线）
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/sw.js").catch(() => {});
+  }
+</script>
 </body>
 </html>

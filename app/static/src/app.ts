@@ -98,9 +98,20 @@ function main(): void {
   bindModeTabs();
   bindCookEvents();
   bindLibraryEvents();
+  bindTheme();
   onRouteChange((route) => {
     if (route.name === "card") void showCard(route.id);
     else void showLibrary();
+  });
+}
+
+function bindTheme(): void {
+  const saved = localStorage.getItem("theme");
+  if (saved) document.documentElement.setAttribute("data-theme", saved);
+  $("#btn-theme").addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", cur);
+    localStorage.setItem("theme", cur);
   });
 }
 
