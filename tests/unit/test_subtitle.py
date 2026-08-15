@@ -108,3 +108,37 @@ class TestPreprocessLines:
         ]
         out = preprocess_lines(lines)
         assert out[0].text == "先发生的"
+
+    def test_long_sentence_not_merged(self) -> None:
+        """AI 字幕无标点：长句不得合并，否则时间分辨率被吞（真实事故回归）。"""
+        lines = [
+            SubtitleLine(start=0, end=2, text="整只鸡或者半只鸡都可以"),
+            SubtitleLine(start=2, end=4, text="大小按自己喜好来就行"),
+        ]
+        out = preprocess_lines(lines)
+        assert len(out) == 2
+        assert out[0].text == "整只鸡或者半只鸡都可以"
+        assert out[1].start == 2.0
+
+    def test_filler_word_substring_not_filtered(self) -> None:
+        """「啊」等语气词只能整句过滤，不能子串匹配（「好香啊」会被误伤）。"""
+        lines = [SubtitleLine(start=0, end=2, text="好香啊，出锅了")]
+        out = preprocess_lines(lines)
+        assert [line.text for line in out] == ["好香啊，出锅了"]
+
+    def test_filler_whole_line_filtered(self) -> None:
+        lines = [SubtitleLine(start=0, end=2, text="好的"), SubtitleLine(start=2, end=4, text="下锅")]
+        out = preprocess_lines(lines)
+        assert [line.text for line in out] == ["下锅"]
+
+    def test_short_fragment_merged_but_long_sentence_stops(self) -> None:
+        """短残片合并后形成长句，后续不再吞并后面的长句。"""
+        lines = [
+            SubtitleLine(start=0, end=1, text="买两根"),
+            SubtitleLine(start=1, end=2, text="大鸡腿"),
+            SubtitleLine(start=2, end=4, text="买的时候可以让老板帮你剁一下"),
+        ]
+        out = preprocess_lines(lines)
+        assert len(out) == 2
+        assert out[0].text == "买两根大鸡腿"
+        assert out[1].text == "买的时候可以让老板帮你剁一下"

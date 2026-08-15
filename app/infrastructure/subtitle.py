@@ -21,15 +21,17 @@ PREFERRED_LANGS: tuple[str, ...] = (
     "ai-zh-Hans",
 )
 
-# 闲话信号：寒暄开场 / 求三连 / 广告口播 / 无信息量语气词
+# 闲话信号：寒暄开场 / 求三连 / 广告口播（子串匹配；语气词不在此列，见 _FILLER_LINES）
 _FLAFFY_RE = re.compile(
     r"(点赞|投币|收藏|三连|一键三连|关注|订阅|记得.{0,6}(关注|点赞|投币|三连)"
     r"|本期视频|这期视频|下期视频|视频里|视频中|欢迎大家|给大家|分享一道|大厨"
-    r"|喜欢.{0,6}(视频|记得)|每天更新|感谢.{0,8}观看|我们下次|再见|拜拜"
-    r"|嗯|呃|啊|哦|那好|好的)",
+    r"|喜欢.{0,6}(视频|记得)|每天更新|感谢.{0,8}观看|我们下次|再见|拜拜)",
 )
+# 整句就是语气词的才过滤；禁止子串匹配（「好香啊」会被「啊」误伤）
+_FILLER_LINES = {"嗯", "呃", "啊", "哦", "好的", "那好", "对", "嗯嗯", "对对", "好嘞", "对啦"}
 _ENDING_RE = re.compile(r"[。！？!?…]$")
 _MERGE_GAP_SEC = 0.5  # 相邻字幕 gap 小于此值视为断句，可合并
+_MERGE_MAX_PREV_LEN = 10  # 前句短于此字数才允许合并：AI 字幕无标点，长句合并会吞掉时间分辨率
 _STRIP_RE = re.compile(r"[\s\u3000]+")
 
 
@@ -110,7 +112,7 @@ def parse_srt(raw: str) -> list[SubtitleLine]:
 
 
 def _is_flaffy(text: str) -> bool:
-    return bool(_FLAFFY_RE.search(text)) or len(text) <= 1
+    return bool(_FLAFFY_RE.search(text)) or len(text) <= 1 or text in _FILLER_LINES
 
 
 def preprocess_lines(lines: list[SubtitleLine]) -> list[SubtitleLine]:
@@ -131,7 +133,13 @@ def preprocess_lines(lines: list[SubtitleLine]) -> list[SubtitleLine]:
             continue
         prev = merged[-1]
         gap = line.start - prev.end
-        if gap <= _MERGE_GAP_SEC and not _ENDING_RE.search(prev.text):
+        # 只合并「短残片」（前后两句都短）：AI 字幕无标点，长句合并会吞掉时间分辨率
+        if (
+            gap <= _MERGE_GAP_SEC
+            and not _ENDING_RE.search(prev.text)
+            and len(prev.text) < _MERGE_MAX_PREV_LEN
+            and len(line.text) < _MERGE_MAX_PREV_LEN
+        ):
             merged[-1] = SubtitleLine(
                 start=prev.start,
                 end=line.end,
