@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>视频脱水机</title>
+<style>
+  :root { --accent: #e65c41; --bg: #faf7f2; --card: #fff; --muted: #8a8578; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: #2b2926; }
+  .topbar { background: var(--card); border-bottom: 1px solid #eee; padding: 14px 20px; display: flex; gap: 10px; align-items: center; position: sticky; top: 0; z-index: 10; }
+  .topbar h1 { font-size: 18px; margin: 0 16px 0 0; white-space: nowrap; }
+  .topbar h1 span { color: var(--accent); }
+  #url { flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+  #url:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  button { padding: 10px 18px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; background: #eee; }
+  button.primary { background: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:disabled { opacity: .6; cursor: wait; }
+  .container { display: flex; gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
+  .main { flex: 1; min-width: 0; }
+  .side { width: 260px; flex-shrink: 0; }
+  .panel { background: var(--card); border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .panel + .panel { margin-top: 16px; }
+  .warn { background: #fff7e6; border: 1px solid #ffe1a8; color: #8a5b00; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: 13px; }
+  .recipe-title { font-size: 24px; margin: 4px 0; }
+  .meta { color: var(--muted); font-size: 13px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .meta a { color: var(--accent); text-decoration: none; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
+  @media (max-width: 800px) { .cols { grid-template-columns: 1fr; } .container { flex-direction: column-reverse; } .side { width: 100%; } }
+  h3 { font-size: 15px; margin: 0 0 10px; border-left: 4px solid var(--accent); padding-left: 8px; }
+  .ing { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
+  .ing.done { color: var(--muted); text-decoration: line-through; }
+  .ing .amount { margin-left: auto; color: var(--muted); }
+  .step { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f0ede6; }
+  .step .no { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .step .body { flex: 1; min-width: 0; }
+  .step .title { font-weight: 700; }
+  .step .time { font-size: 12px; color: var(--muted); margin-left: 8px; }
+  .step .done { color: #2e7d32; font-size: 13px; margin-top: 4px; }
+  .step .tip { color: #b26a00; font-size: 13px; margin-top: 4px; }
+  .step img { max-width: 220px; border-radius: 8px; margin-top: 8px; display: block; }
+  .tool { display: inline-block; background: #f3efe8; border-radius: 20px; padding: 4px 12px; font-size: 13px; margin: 0 6px 6px 0; }
+  .history-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f2efe9; }
+  .history-item:hover { background: #f6f1ea; }
+  .history-item .sub { font-size: 12px; color: var(--muted); }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 30px 10px; }
+  .status { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .editing textarea { width: 100%; min-height: 360px; font-family: monospace; font-size: 13px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; }
+  .row-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .badge { font-size: 12px; background: #eee; border-radius: 20px; padding: 2px 10px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>🍳 视频<span>脱水机</span></h1>
+  <input id="url" type="text" placeholder="粘贴 B站视频链接（BV号或完整 URL），如 BV1xx411c7mD" />
+  <button id="btn-go" class="primary">脱水</button>
+</div>
+<div class="container">
+  <div class="main panel" id="main">
+    <div class="empty" id="empty-hint">粘贴一个 B站做饭视频链接，点「脱水」，把视频变成能照着做的菜谱卡。</div>
+    <div id="card" hidden></div>
+  </div>
+  <div class="side">
+    <div class="panel">
+      <h3>🛒 买菜清单</h3>
+      <div id="shopping" class="empty" style="padding:10px">脱水后自动生成</div>
+    </div>
+    <div class="panel">
+      <h3>📚 历史卡片</h3>
+      <div id="history"><div class="empty">还没有卡片</div></div>
+    </div>
+  </div>
+</div>
+<div id="status" class="status" style="text-align:center"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const API = {
+  dehydrate: (url, withFrames) => fetch('/api/dehydrate', { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ url, with_frames: withFrames }) }).then(handle),
+  cards: () => fetch('/api/cards').then(handle),
+  get: (id) => fetch(`/api/cards/${id}`).then(handle),
+  update: (id, recipe) => fetch(`/api/cards/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(recipe) }).then(handle),
+  remove: (id) => fetch(`/api/cards/${id}`, { method: 'DELETE' }).then(handle),
+};
+async function handle(resp) {
+  if (resp.status === 204) return null;
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.detail || `请求失败 (${resp.status})`);
+  return data;
+}
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function render(recipe, cardId) {
+  $('#empty-hint').hidden = true;
+  $('#card').hidden = false;
+  const have = new Set();
+  $('#card').innerHTML = `
+    <div class="recipe-title">${esc(recipe.title)}</div>
+    <div class="meta">
+      ${recipe.difficulty ? `<span>难度：${esc(recipe.difficulty)}</span>` : ''}
+      ${recipe.servings ? `<span>份量：${esc(recipe.servings)}</span>` : ''}
+      ${recipe.total_time ? `<span>耗时：${esc(recipe.total_time)}</span>` : ''}
+      ${recipe.uploader ? `<span>UP：${esc(recipe.uploader)}</span>` : ''}
+      ${recipe.source_url ? `<a href="${esc(recipe.source_url)}" target="_blank">原视频</a>` : ''}
+    </div>
+    ${(recipe.warnings || []).map(w => `<div class="warn">⚠️ ${esc(w)}</div>`).join('')}
+    <div class="cols">
+      <div>
+        <h3>🥬 食材</h3>
+        ${(recipe.ingredients || []).map((g, i) => `
+          <div class="ing" data-i="${i}"><input type="checkbox" onchange="toggleHave(this, '${esc(g.name)}')">
+            <span>${esc(g.name)}</span>${g.note ? `<span class="badge">${esc(g.note)}</span>` : ''}
+            <span class="amount">${esc(g.amount || '')}</span></div>`).join('') || '<div class="empty">无食材</div>'}
+      </div>
+      <div>
+        <h3>🔪 工具</h3>
+        <div>${(recipe.tools || []).map(t => `<span class="tool">${esc(t)}</span>`).join('') || '<div class="empty">未提及</div>'}</div>
+        <h3 style="margin-top:16px">💡 小贴士</h3>
+        <ul style="margin:0;padding-left:20px;font-size:14px">${(recipe.tips || []).map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+      </div>
+    </div>
+    <h3 style="margin-top:18px">📋 步骤</h3>
+    ${(recipe.steps || []).map((s, i) => `
+      <div class="step">
+        <div class="no">${i + 1}</div>
+        <div class="body">
+          <div><span class="title">${esc(s.title)}</span><span class="time">${fmt(s.start_sec)}–${fmt(s.end_sec)}</span></div>
+          <div style="font-size:14px;margin-top:4px">${esc(s.description)}</div>
+          ${s.done_when ? `<div class="done">✅ ${esc(s.done_when)}</div>` : ''}
+          ${s.tip ? `<div class="tip">⚠️ ${esc(s.tip)}</div>` : ''}
+          ${s.frame_path ? `<img src="/api/frames/${encodeURIComponent(s.frame_path)}" alt="步骤${i+1}">` : ''}
+        </div>
+      </div>`).join('') || '<div class="empty">无步骤</div>'}
+    <div class="row-actions">
+      <button onclick="editMode()">✏️ 编辑</button>
+      <button onclick="deleteCard()" style="color:#c0392b">🗑 删除</button>
+    </div>`;
+  window.__card = { id: cardId, recipe };
+  renderShopping(recipe);
+}
+
+function fmt(sec) { const s = Math.round(sec); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+function toggleHave(cb, name) {
+  cb.closest('.ing').classList.toggle('done', cb.checked);
+  const need = [...document.querySelectorAll('.ing:not(.done) .badge')];
+  void need;
+  const missing = [...document.querySelectorAll('.ing:not(.done)')].map(el => el.textContent.trim());
+  $('#shopping').innerHTML = missing.length ? missing.map(m => `<div class="ing">${esc(m)}</div>`).join('') : '<div class="empty">食材齐了 🎉</div>';
+}
+function renderShopping(recipe) {
+  const items = (recipe.ingredients || []).map(g =>
+    `<div class="ing"><span>${esc(g.name)}</span><span class="amount">${esc(g.amount || '')}</span></div>`);
+  $('#shopping').innerHTML = items.join('') || '<div class="empty">脱水后自动生成</div>';
+}
+function editMode() {
+  const { recipe } = window.__card;
+  $('#card').innerHTML = `
+    <h3>编辑菜谱 JSON（保存前请确认步骤顺序与时间区间）</h3>
+    <textarea id="editor">${esc(JSON.stringify(recipe, null, 2))}</textarea>
+    <div class="row-actions">
+      <button class="primary" onclick="saveEdit()">💾 保存</button>
+      <button onclick="location.reload()">取消</button>
+    </div>`;
+}
+async function saveEdit() {
+  try {
+    const parsed = JSON.parse($('#editor').value);
+    const { id } = window.__card;
+    const data = await API.update(id, parsed);
+    render(data.recipe, data.id);
+    loadHistory();
+  } catch (e) { alert('保存失败：' + e.message); }
+}
+async function deleteCard() {
+  if (!confirm('删除这张卡片？')) return;
+  await API.remove(window.__card.id);
+  location.reload();
+}
+
+async function go() {
+  const url = $('#url').value.trim();
+  if (!url) { alert('请先粘贴视频链接'); return; }
+  const btn = $('#btn-go');
+  btn.disabled = true;
+  btn.textContent = '脱水进行中…';
+  setStatus('抓取字幕并切分中（通常 20–90 秒）…');
+  try {
+    const data = await API.dehydrate(url, true);
+    render(data.recipe, data.card_id);
+    loadHistory();
+    setStatus('✅ 完成');
+  } catch (e) {
+    setStatus('❌ ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '脱水';
+  }
+}
+function setStatus(t) { $('#status').textContent = t; }
+
+async function loadHistory() {
+  try {
+    const list = await API.cards();
+    $('#history').innerHTML = list.length ? list.map(({ id, recipe }) => `
+      <div class="history-item" onclick="openCard('${id}')">
+        <div>${esc(recipe.title)}</div>
+        <div class="sub">${(recipe.steps || []).length} 步 · ${esc(recipe.uploader || '')}</div>
+      </div>`).join('') : '<div class="empty">还没有卡片</div>';
+  } catch (e) { /* 忽略 */ }
+}
+async function openCard(id) {
+  try {
+    const data = await API.get(id);
+    render(data.recipe, data.id);
+  } catch (e) { alert(e.message); }
+}
+
+$('#btn-go').addEventListener('click', go);
+$('#url').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+loadHistory();
+</script>
+</body>
+</html>

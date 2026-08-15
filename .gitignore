@@ -1,0 +1,27 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# uv local cache (sandbox workaround)
+.uv-cache/
+
+# Runtime data & secrets
+data/
+.env
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Editor/OS
+.idea/
+.vscode/
+.DS_Store

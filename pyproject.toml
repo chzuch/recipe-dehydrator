@@ -1,0 +1,58 @@
+[project]
+name = "video-dehydrator"
+version = "0.1.0"
+description = "B站视频脱水机：视频链接 → 图文菜谱卡（本地自用）"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.15.0",
+    "uvicorn[standard]>=0.52.3",
+    "yt-dlp>=2026.7.4",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.3",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "ASYNC", "RUF"]
+# RUF001/002/003（混淆 unicode）对中文注释/文案是系统性误报，项目级豁免
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# prompt 模板与字幕样例是"发给 LLM 的文本数据"，折行会改变内容，豁免行宽
+"app/application/prompts.py" = ["E501"]
+"tests/unit/test_subtitle.py" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["app", "tests"]
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+# yt-dlp 无类型 stub（动态库），豁免 missing-imports
+module = "yt_dlp"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-q"
