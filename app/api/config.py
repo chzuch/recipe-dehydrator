@@ -43,3 +43,5 @@ class Settings(BaseSettings):
 
     # 是否默认给步骤抽帧
     with_frames: bool = True
+    # 是否默认给步骤生成 GIF（默认关：体积较大，按需开启）
+    with_gif: bool = False

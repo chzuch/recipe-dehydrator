@@ -24,10 +24,10 @@ MAX_OVERLAP_SEC = 2.0
 # 总跨度与视频时长的最大相对偏差
 MAX_DURATION_DRIFT = 0.2
 
-# 触发 GIF 生成的动作词（这些动作静态图教不会，新手需要看手法）
-GIF_ACTION_WORDS = ("翻炒", "搅拌", "颠", "淋", "搅", "翻拌", "掂", "泼", "倒入")
 # GIF 片段时长（秒）
 GIF_DURATION_SEC = 2.0
+# 步骤数超过此阈值时，GIF 只给中间阶段的步骤（首尾通常是备料/装盘，手法信息少）
+GIF_STEP_THRESHOLD = 8
 
 
 def pick_frame_time(step: Step, lines: list[SubtitleLine]) -> float:
@@ -50,10 +50,18 @@ def pick_frame_time(step: Step, lines: list[SubtitleLine]) -> float:
     return step.start_sec + (step.end_sec - step.start_sec) / 2
 
 
-def is_action_step(step: Step) -> bool:
-    """该步骤是否包含需要看手法的动作（触发 GIF 生成）。"""
-    text = step.title + step.description + (step.tip or "")
-    return any(w in text for w in GIF_ACTION_WORDS)
+def select_gif_steps(steps: list[Step]) -> list[Step]:
+    """选择生成 GIF 的步骤：≤阈值全选；超过则只选中间阶段（跳首尾备料/装盘阶段）。"""
+    if len(steps) <= GIF_STEP_THRESHOLD:
+        return list(steps)
+    phases: list[str] = []
+    for s in steps:
+        if s.phase not in phases:
+            phases.append(s.phase)
+    if len(phases) <= 2:
+        return list(steps)  # 阶段太少无法区分首尾，全选
+    middle_phases = set(phases[1:-1])
+    return [s for s in steps if s.phase in middle_phases]
 
 
 def merge_duplicate_ingredients(ingredients: list[Ingredient]) -> list[Ingredient]:

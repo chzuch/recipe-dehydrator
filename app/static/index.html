@@ -63,6 +63,9 @@
 <div class="topbar">
   <h1>🍳 视频<span>脱水机</span></h1>
   <input id="url" type="text" placeholder="粘贴 B站视频链接（BV号或完整 URL），如 BV1xx411c7mD" />
+  <label style="font-size:13px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:4px">
+    <input type="checkbox" id="with-gif"> 生成GIF
+  </label>
   <button id="btn-go" class="primary">脱水</button>
 </div>
 <div class="container">
@@ -86,8 +89,8 @@
 <script>
 const $ = (s) => document.querySelector(s);
 const API = {
-  dehydrate: (url, withFrames) => fetch('/api/dehydrate', { method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ url, with_frames: withFrames }) }).then(handle),
+  dehydrate: (url, withFrames, withGif) => fetch('/api/dehydrate', { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ url, with_frames: withFrames, with_gif: withGif }) }).then(handle),
   cards: () => fetch('/api/cards').then(handle),
   get: (id) => fetch(`/api/cards/${id}`).then(handle),
   update: (id, recipe) => fetch(`/api/cards/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'},
@@ -259,7 +262,7 @@ async function go() {
   btn.textContent = '脱水进行中…';
   setStatus('抓取字幕并切分中（通常 20–90 秒）…');
   try {
-    const data = await API.dehydrate(url, true);
+    const data = await API.dehydrate(url, true, $('#with-gif').checked);
     render(data.recipe, data.card_id);
     loadHistory();
     setStatus('✅ 完成');

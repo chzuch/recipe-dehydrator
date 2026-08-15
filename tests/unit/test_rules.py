@@ -7,9 +7,9 @@ from app.domain.rules import (
     check_ingredient_closure,
     check_order,
     check_time_consistency,
-    is_action_step,
     merge_duplicate_ingredients,
     pick_frame_time,
+    select_gif_steps,
     validate_recipe,
 )
 
@@ -162,11 +162,25 @@ class TestPickFrameTime:
         assert pick_frame_time(step, lines) == 120.0
 
 
-class TestIsActionStep:
-    def test_action_word_triggers(self) -> None:
-        step = Step(index=1, title="翻炒鸡肉", phase="炒制", description="下锅快速翻炒", start_sec=0, end_sec=10)
-        assert is_action_step(step) is True
+class TestSelectGifSteps:
+    def _steps_with_phases(self, phases: list[str]) -> list[Step]:
+        return [
+            Step(index=i, title=f"步骤{i}", phase=p, description="做", start_sec=i * 10, end_sec=i * 10 + 10)
+            for i, p in enumerate(phases, 1)
+        ]
 
-    def test_static_step_not_triggered(self) -> None:
-        step = Step(index=1, title="切牛肉", phase="备料", description="牛腩肉切成稍大的块", start_sec=0, end_sec=10)
-        assert is_action_step(step) is False
+    def test_few_steps_all_selected(self) -> None:
+        steps = self._steps_with_phases(["备料", "备料", "炒制", "炒制", "收尾"])
+        assert select_gif_steps(steps) == steps
+
+    def test_many_steps_skip_first_last_phase(self) -> None:
+        phases = ["备料"] * 3 + ["炒制"] * 4 + ["炖煮"] * 2 + ["收尾"]  # 10 步
+        steps = self._steps_with_phases(phases)
+        selected = select_gif_steps(steps)
+        assert len(selected) == 6
+        assert all(s.phase in {"炒制", "炖煮"} for s in selected)
+
+    def test_two_phases_all_selected(self) -> None:
+        phases = ["备料"] * 5 + ["炒制"] * 5  # 10 步但只有 2 阶段
+        steps = self._steps_with_phases(phases)
+        assert select_gif_steps(steps) == steps

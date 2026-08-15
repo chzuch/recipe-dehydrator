@@ -29,9 +29,9 @@ from app.domain.models import Recipe, SubtitleLine
 from app.domain.ports import CardStore, Fetcher, FrameExtractor, LLMClient
 from app.domain.rules import (
     GIF_DURATION_SEC,
-    is_action_step,
     merge_duplicate_ingredients,
     pick_frame_time,
+    select_gif_steps,
     validate_recipe,
 )
 
@@ -49,6 +49,7 @@ class DehydrateUseCase:
         store: CardStore,
         frames_dir: str | Path,
         with_frames: bool = True,
+        with_gif: bool = False,
     ) -> None:
         self._fetcher = fetcher
         self._llm = llm
@@ -56,12 +57,20 @@ class DehydrateUseCase:
         self._store = store
         self._frames_dir = Path(frames_dir)
         self._with_frames = with_frames
+        self._with_gif = with_gif
         self._last_error_messages: list[str] = []
 
-    async def run(self, url: str, with_frames: bool | None = None) -> tuple[str, Recipe]:
-        """执行脱水，返回 (card_id, recipe)。with_frames=None 时用构造默认值。"""
+    async def run(
+        self,
+        url: str,
+        with_frames: bool | None = None,
+        with_gif: bool | None = None,
+    ) -> tuple[str, Recipe]:
+        """执行脱水，返回 (card_id, recipe)。开关为 None 时用构造默认值。"""
         want_frames = self._with_frames if with_frames is None else with_frames
-        video, lines = await self._fetcher.fetch(url, with_video=want_frames)
+        want_gif = self._with_gif if with_gif is None else with_gif
+        # GIF 也需要视频文件：开 GIF 隐含下载视频
+        video, lines = await self._fetcher.fetch(url, with_video=want_frames or want_gif)
         if not lines:
             raise SubtitleNotFoundError("字幕预处理后为空，无法脱水")
 
@@ -81,8 +90,8 @@ class DehydrateUseCase:
 
         recipe.warnings = [i.message for i in issues if i.severity == "warning"]
 
-        if want_frames:
-            await self._attach_frames(recipe, lines)
+        if want_frames or want_gif:
+            await self._attach_frames(recipe, lines, want_frames=want_frames, want_gif=want_gif)
 
         card_id = await self._store.save(recipe)
         await self._fetcher.cleanup()
@@ -150,29 +159,31 @@ class DehydrateUseCase:
         msg = "切分失败（不应到达）"
         raise ValidationFailedError(msg)
 
-    async def _attach_frames(self, recipe: Recipe, lines: list[SubtitleLine]) -> None:
-        """步骤配图：静态图关键句对齐抽帧 + 动作步骤生成 GIF；失败不阻断整张卡。"""
+    async def _attach_frames(
+        self, recipe: Recipe, lines: list[SubtitleLine], want_frames: bool, want_gif: bool
+    ) -> None:
+        """步骤配图：静态图关键句对齐抽帧 + GIF（可选）；失败不阻断整张卡。"""
         video_path = await self._fetcher.video_path()
         if not video_path:
             return
-        timestamps = [pick_frame_time(s, lines) for s in recipe.steps]
-        try:
-            names = await self._frames.extract(video_path, timestamps, str(self._frames_dir))
-        except (RuntimeError, OSError) as exc:
-            logger.warning("抽帧失败，跳过（不影响卡片）: %s", exc)
-            return
-        for step, name in zip(recipe.steps, names, strict=True):
-            step.frame_path = name
-
-        # 动作步骤（翻炒/搅拌等）生成 2 秒循环 GIF——新手最缺的是手法
-        for step in recipe.steps:
-            if not is_action_step(step):
-                continue
-            duration = min(GIF_DURATION_SEC, max(0.5, step.end_sec - step.start_sec))
-            start = max(step.start_sec, pick_frame_time(step, lines) - 0.5)
+        if want_frames:
+            timestamps = [pick_frame_time(s, lines) for s in recipe.steps]
             try:
-                step.gif_path = await self._frames.extract_gif(
-                    video_path, start, duration, str(self._frames_dir)
-                )
+                names = await self._frames.extract(video_path, timestamps, str(self._frames_dir))
             except (RuntimeError, OSError) as exc:
-                logger.warning("步骤%d GIF 生成失败，跳过: %s", step.index, exc)
+                logger.warning("抽帧失败，跳过（不影响卡片）: %s", exc)
+                names = []
+            for step, name in zip(recipe.steps, names, strict=False):
+                step.frame_path = name
+
+        if want_gif:
+            # 每步都生成；步骤过多时只选中间阶段（首尾备料/装盘手法信息少）
+            for step in select_gif_steps(recipe.steps):
+                duration = min(GIF_DURATION_SEC, max(0.5, step.end_sec - step.start_sec))
+                start = max(step.start_sec, pick_frame_time(step, lines) - 0.5)
+                try:
+                    step.gif_path = await self._frames.extract_gif(
+                        video_path, start, duration, str(self._frames_dir)
+                    )
+                except (RuntimeError, OSError) as exc:
+                    logger.warning("步骤%d GIF 生成失败，跳过: %s", step.index, exc)

@@ -68,6 +68,7 @@ def _make_usecase(
     llm: FakeLLMClient,
     lines: list[SubtitleLine] | None = None,
     with_frames: bool = True,
+    with_gif: bool = False,
     video_path: str | None = "video.mp4",
 ) -> tuple[DehydrateUseCase, FakeCardStore, FakeFrameExtractor, FakeFetcher]:
     fetcher = FakeFetcher(
@@ -84,6 +85,7 @@ def _make_usecase(
         store=store,
         frames_dir="data/frames",
         with_frames=with_frames,
+        with_gif=with_gif,
     )
     return usecase, store, frames, fetcher
 
@@ -136,6 +138,22 @@ class TestDehydratePipeline:
         assert all(s.frame_path is None for s in recipe.steps)
         # 未下载视频时 fetcher.cleanup 无副作用
         await fetcher.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_gif_off_by_default(self) -> None:
+        """GIF 默认关闭：不生成、不下载视频（无额外开销）。"""
+        usecase, _, frames, _ = _make_usecase(FakeLLMClient([SAMPLE_RECIPE]), with_frames=True)
+        _, recipe = await usecase.run("BV1xx")
+        assert all(s.gif_path is None for s in recipe.steps)
+        assert frames.gif_calls == []
+
+    @pytest.mark.asyncio
+    async def test_gif_on_generates_per_step(self) -> None:
+        """GIF 开启：≤8 步时每步都生成。"""
+        usecase, _, frames, _ = _make_usecase(FakeLLMClient([SAMPLE_RECIPE]), with_gif=True)
+        _, recipe = await usecase.run("BV1xx")
+        assert all(s.gif_path is not None for s in recipe.steps)
+        assert len(frames.gif_calls) == len(recipe.steps)
 
     @pytest.mark.asyncio
     async def test_unparseable_llm_output_retries(self) -> None:

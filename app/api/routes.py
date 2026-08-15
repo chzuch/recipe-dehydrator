@@ -36,7 +36,9 @@ def _services(request: Request) -> Services:
 
 @router.post("/api/dehydrate")
 async def api_dehydrate(req: DehydrateRequest, request: Request) -> dict[str, Any]:
-    card_id, recipe = await _services(request).dehydrate.run(req.url, with_frames=req.with_frames)
+    card_id, recipe = await _services(request).dehydrate.run(
+        req.url, with_frames=req.with_frames, with_gif=req.with_gif
+    )
     return {"card_id": card_id, "recipe": recipe}
 
 

@@ -69,6 +69,7 @@ def build_services(settings: Settings) -> Services:
         store=store,
         frames_dir=settings.frames_dir,
         with_frames=settings.with_frames,
+        with_gif=settings.with_gif,
     )
     cards = CardsUseCase(store=store, samples_dir=settings.samples_dir)
     return Services(dehydrate=dehydrate, cards=cards, frames_dir=settings.frames_dir)
