@@ -19,7 +19,7 @@ from tests.fakes import (
     FakeLLMClient,
     FakeVideoInfo,
 )
-from tests.integration.test_dehydrate_pipeline import LINES, SAMPLE_RECIPE
+from tests.fixtures import LINES, SAMPLE_RECIPE
 
 
 class _FailingLLM(FakeLLMClient):

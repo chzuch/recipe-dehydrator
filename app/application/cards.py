@@ -14,7 +14,7 @@ from pathlib import Path
 
 from app.domain.models import Recipe
 from app.domain.ports import CardStore
-from app.domain.rules import validate_recipe
+from app.domain.validation import validate_recipe
 
 logger = logging.getLogger(__name__)
 

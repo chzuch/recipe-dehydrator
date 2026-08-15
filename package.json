@@ -1,0 +1,16 @@
+{
+  "name": "video-dehydrator",
+  "version": "0.2.0",
+  "description": "把 B站做饭视频「脱水」成能照着做的图文菜谱卡",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild app/static/src/app.ts --bundle --outfile=app/static/dist/app.js --format=esm",
+    "watch": "esbuild app/static/src/app.ts --bundle --outfile=app/static/dist/app.js --format=esm --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}

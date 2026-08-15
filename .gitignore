@@ -22,6 +22,10 @@ cookies.txt
 .pytest_cache/
 .ruff_cache/
 
+# Node / 前端构建产物
+node_modules/
+app/static/dist/
+
 # Editor/OS
 .idea/
 .vscode/

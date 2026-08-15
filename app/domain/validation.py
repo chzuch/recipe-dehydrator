@@ -15,7 +15,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from app.domain.models import Ingredient, Recipe, Step, SubtitleLine
+from app.domain.models import Recipe
 
 # 相邻步骤间允许的最大闲话间隙（秒）：超过视为「可能漏了步骤」
 MAX_GAP_SEC = 30.0
@@ -23,67 +23,6 @@ MAX_GAP_SEC = 30.0
 MAX_OVERLAP_SEC = 2.0
 # 总跨度与视频时长的最大相对偏差
 MAX_DURATION_DRIFT = 0.2
-
-# GIF 片段时长（秒）
-GIF_DURATION_SEC = 2.0
-# 步骤数超过此阈值时，GIF 只给中间阶段的步骤（首尾通常是备料/装盘，手法信息少）
-GIF_STEP_THRESHOLD = 8
-
-
-def pick_frame_time(step: Step, lines: list[SubtitleLine]) -> float:
-    """关键句对齐抽帧：在步骤区间内找含烹饪动作的字幕行，取该行中点。
-
-    说「倒入料酒」时画面大概率正在倒——比区间中点靠谱得多。
-    找不到则回退区间中点。
-    """
-    in_range = [
-        line
-        for line in lines
-        if line.start >= step.start_sec - MAX_OVERLAP_SEC and line.end <= step.end_sec + MAX_OVERLAP_SEC
-    ]
-    for line in in_range:
-        if any(
-            v in line.text
-            for v in ("切", "炒", "炖", "煮", "焯", "炸", "煎", "加", "倒", "放", "翻炒", "搅拌", "收汁")
-        ):
-            return (line.start + line.end) / 2
-    return step.start_sec + (step.end_sec - step.start_sec) / 2
-
-
-def select_gif_steps(steps: list[Step]) -> list[Step]:
-    """选择生成 GIF 的步骤：≤阈值全选；超过则只选中间阶段（跳首尾备料/装盘阶段）。"""
-    if len(steps) <= GIF_STEP_THRESHOLD:
-        return list(steps)
-    phases: list[str] = []
-    for s in steps:
-        if s.phase not in phases:
-            phases.append(s.phase)
-    if len(phases) <= 2:
-        return list(steps)  # 阶段太少无法区分首尾，全选
-    middle_phases = set(phases[1:-1])
-    return [s for s in steps if s.phase in middle_phases]
-
-
-def merge_duplicate_ingredients(ingredients: list[Ingredient]) -> list[Ingredient]:
-    """同名食材合并（LLM 常把同一原料多次出现拆成多条，如花生油 3 次）。
-
-    保留首次出现顺序；amount 合并展示（分号分隔），note 合并。
-    """
-    merged: dict[str, Ingredient] = {}
-    order: list[str] = []
-    for ing in ingredients:
-        key = ing.name.strip()
-        if key not in merged:
-            merged[key] = ing.model_copy(deep=True)
-            order.append(key)
-            continue
-        prev = merged[key]
-        amounts = [a for a in (prev.amount, ing.amount) if a]
-        if amounts:
-            prev.amount = "；".join(amounts)
-        if ing.note:
-            prev.note = f"{prev.note}；{ing.note}" if prev.note else ing.note
-    return [merged[key] for key in order]
 
 
 class ValidationIssue(BaseModel):
