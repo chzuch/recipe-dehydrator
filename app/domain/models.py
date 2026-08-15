@@ -24,8 +24,8 @@ class Ingredient(BaseModel):
     name: str = Field(min_length=1, description="食材名，如「牛腩肉」")
     amount: str | None = Field(default=None, description="用量，如「500克」")
     note: str | None = Field(default=None, description="选购/处理备注，如「选肥瘦相间的」")
-    category: Literal["主料", "配菜", "调味料", "香料", "需提前自制"] = Field(
-        description="食材分类；调味料=家庭常备（油盐酱醋），香料=葱姜蒜/桂皮八角花椒等"
+    category: Literal["主料", "配料", "调味料", "香料", "需提前自制"] = Field(
+        description="食材分类；配料=湿的提味配头（葱姜蒜/鲜辣椒），香料=干料，调味料=成品（含淀粉/白糖）"
     )
     essential: bool = Field(description="是否必不可少（核心食材）；可选/锦上添花为 False")
 

@@ -44,7 +44,7 @@ class TestRecipe:
         recipe = Recipe(
             title="番茄炒蛋",
             ingredients=[
-                Ingredient(name="番茄", amount="2个", category="配菜", essential=True),
+                Ingredient(name="番茄", amount="2个", category="配料", essential=True),
                 Ingredient(name="鸡蛋", amount="3个", category="主料", essential=True),
             ],
         )
@@ -54,6 +54,6 @@ class TestRecipe:
     def test_shopping_list_empty_have_returns_all(self) -> None:
         recipe = Recipe(
             title="番茄炒蛋",
-            ingredients=[Ingredient(name="番茄", category="配菜", essential=True)],
+            ingredients=[Ingredient(name="番茄", category="配料", essential=True)],
         )
         assert len(recipe.shopping_list()) == 1

@@ -31,6 +31,12 @@ class TestBuildSplitPrompt:
         assert "essential" in SYSTEM_SPLIT
         assert "主料" in SYSTEM_SPLIT and "需提前自制" in SYSTEM_SPLIT
 
+    def test_system_v5_category_boundaries(self) -> None:
+        """split-v5：配料（湿）/香料（干）/调味料（成品含淀粉白糖）边界规则。"""
+        assert "配料" in SYSTEM_SPLIT
+        assert "鲜辣椒→配料" in SYSTEM_SPLIT
+        assert "淀粉" in SYSTEM_SPLIT
+
 
 class TestBuildRetryPrompt:
     def test_includes_previous_output_and_issues(self) -> None:

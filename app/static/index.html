@@ -101,9 +101,9 @@ async function handle(resp) {
 }
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const CATEGORIES = ['主料', '配菜', '调味料', '香料', '需提前自制'];
+const CATEGORIES = ['主料', '配料', '调味料', '香料', '需提前自制'];
 // 买菜清单只包含需要购买的分类（调味料=家庭常备，不进清单）
-const SHOPPING_CATEGORIES = ['主料', '配菜', '香料', '需提前自制'];
+const SHOPPING_CATEGORIES = ['主料', '配料', '香料', '需提前自制'];
 
 // 按分类分组食材，组内核心在前、可选在后
 function groupIngredients(ingredients) {
