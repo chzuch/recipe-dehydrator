@@ -148,3 +148,22 @@ class TestDehydratePipeline:
         with pytest.raises(NoCookingContentError):
             await usecase.run("BV1xx")
         assert len(llm.calls) == 1  # 不重试
+
+    @pytest.mark.asyncio
+    async def test_duplicate_ingredients_merged_before_save(self) -> None:
+        """LLM 把同名食材拆成多条 → 入库前合并（买菜清单爆炸的真实事故回归）。"""
+        with_dups = {
+            **SAMPLE_RECIPE,
+            "ingredients": [
+                {"name": "花生油", "amount": "50克"},
+                {"name": "花生油", "amount": "700克"},
+                {"name": "蚝油", "amount": "100克"},
+            ],
+        }
+        usecase, store, _, _ = _make_usecase(FakeLLMClient([with_dups]))
+        card_id, recipe = await usecase.run("BV1xx")
+
+        assert [i.name for i in recipe.ingredients] == ["花生油", "蚝油"]
+        assert recipe.ingredients[0].amount == "50克；700克"
+        saved = await store.get(card_id)
+        assert saved is not None and len(saved.ingredients) == 2

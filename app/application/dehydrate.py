@@ -24,7 +24,7 @@ from app.domain.exceptions import (
 )
 from app.domain.models import Recipe, SubtitleLine
 from app.domain.ports import CardStore, Fetcher, FrameExtractor, LLMClient
-from app.domain.rules import validate_recipe
+from app.domain.rules import merge_duplicate_ingredients, validate_recipe
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,9 @@ class DehydrateUseCase:
                         "该视频字幕疑似为背景音乐歌词或无效内容，没有可提取的烹饪步骤"
                     )
                 recipe = Recipe.model_validate(raw)
+                # 归一化：合并 LLM 拆散的同名食材（花生油×3 → 1 条），
+                # 在 L3 校验前做，让食材闭环检查基于合并后的清单
+                recipe.ingredients = merge_duplicate_ingredients(recipe.ingredients)
             except LLMError:
                 # LLM 调用失败（网络/限流）不重试，直接冒泡 → api 层映射 502
                 raise

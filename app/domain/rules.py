@@ -15,7 +15,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from app.domain.models import Recipe
+from app.domain.models import Ingredient, Recipe
 
 # 相邻步骤间允许的最大闲话间隙（秒）：超过视为「可能漏了步骤」
 MAX_GAP_SEC = 30.0
@@ -23,6 +23,28 @@ MAX_GAP_SEC = 30.0
 MAX_OVERLAP_SEC = 2.0
 # 总跨度与视频时长的最大相对偏差
 MAX_DURATION_DRIFT = 0.2
+
+
+def merge_duplicate_ingredients(ingredients: list[Ingredient]) -> list[Ingredient]:
+    """同名食材合并（LLM 常把同一原料多次出现拆成多条，如花生油 3 次）。
+
+    保留首次出现顺序；amount 合并展示（分号分隔），note 合并。
+    """
+    merged: dict[str, Ingredient] = {}
+    order: list[str] = []
+    for ing in ingredients:
+        key = ing.name.strip()
+        if key not in merged:
+            merged[key] = ing.model_copy(deep=True)
+            order.append(key)
+            continue
+        prev = merged[key]
+        amounts = [a for a in (prev.amount, ing.amount) if a]
+        if amounts:
+            prev.amount = "；".join(amounts)
+        if ing.note:
+            prev.note = f"{prev.note}；{ing.note}" if prev.note else ing.note
+    return [merged[key] for key in order]
 
 
 class ValidationIssue(BaseModel):
