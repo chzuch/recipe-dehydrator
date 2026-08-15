@@ -43,8 +43,10 @@ export function enterShopMode(recipe: Recipe): void {
     })
     .join("");
 
+  const total = recipe.ingredients.filter((ing) => ing.category !== "调味料").length;
+  const checked = recipe.ingredients.filter((ing) => ing.category !== "调味料" && have.has(ing.name)).length;
   root.innerHTML = `
-    <div class="shop-title">🛒 买菜清单</div>
+    <div class="shop-header"><div><span class="eyebrow">SHOPPING LIST</span><div class="shop-title">买菜清单</div></div><span id="shop-remaining" class="shop-remaining">还差 ${total - checked} 样</span></div>
     ${main}
     <details class="opt-group"><summary>调味料（家里常备）${(groups.get("调味料") ?? []).length} 项</summary>${condiments}</details>
     <div class="shop-done" id="shop-done-label">${have.size > 0 ? `已勾选 ${have.size} 项` : ""}</div>
@@ -57,6 +59,8 @@ export function enterShopMode(recipe: Recipe): void {
       cb.closest(".shop-item")?.classList.toggle("done", cb.checked);
       const done = $("#shop-done-label");
       if (done) done.textContent = `已勾选 ${getHaveSet().size} 项`;
+      const remaining = root.querySelector("#shop-remaining");
+      if (remaining) remaining.textContent = `还差 ${root.querySelectorAll(".shop-cb:not(:checked)").length} 样`;
     });
   });
 }

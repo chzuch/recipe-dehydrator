@@ -60,7 +60,8 @@ function renderIngredient(ing: Ingredient, checkbox: boolean): string {
 
 export function renderCard(recipe: Recipe, cardId: string): void {
   setCurrentCard({ id: cardId, recipe });
-  ($("#empty-hint") as HTMLElement).hidden = true;
+  const hint = $("#empty-hint");
+  if (hint) (hint as HTMLElement).hidden = true;
   ($("#card") as HTMLElement).hidden = false;
   const groups = groupIngredients(recipe.ingredients);
   $("#card").innerHTML = `

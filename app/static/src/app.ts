@@ -95,6 +95,10 @@ function main(): void {
     if ((e as KeyboardEvent).key === "Enter") void go();
   });
   $("#back-to-library").addEventListener("click", () => navigate({ name: "library" }));
+  $("#btn-mobile-import").addEventListener("click", () => {
+    $("#url").scrollIntoView({ behavior: "smooth", block: "center" });
+    ($("#url") as HTMLInputElement).focus();
+  });
   bindModeTabs();
   bindCookEvents();
   bindLibraryEvents();
@@ -118,4 +122,3 @@ function bindTheme(): void {
 // 引入避免未使用告警
 void currentCardId;
 main();
-

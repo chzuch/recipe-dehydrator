@@ -3,30 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>视频脱水机</title>
+<title>我的菜谱 · 视频脱水机</title>
 <link rel="stylesheet" href="/static/css/app.css">
 <link rel="manifest" href="/static/manifest.json">
 <meta name="theme-color" content="#e65c41">
 <meta name="apple-mobile-web-app-capable" content="yes">
 </head>
 <body>
-<div class="topbar">
-  <h1>🍳 视频<span>脱水机</span></h1>
-  <input id="url" type="text" placeholder="粘贴 B站视频链接（BV号或完整 URL），如 BV1xx411c7mD" />
-  <label style="font-size:13px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:4px">
+<header class="topbar">
+  <a class="brand" href="#/" aria-label="返回我的菜谱库"><span class="brand-mark">🍳</span><span>我的菜谱<em>视频脱水机</em></span></a>
+  <div class="import-bar">
+    <input id="url" type="text" aria-label="B站视频链接" placeholder="粘贴 B站视频链接或 BV 号" />
+    <label class="gif-toggle" title="为每个步骤生成动作演示 GIF">
     <input type="checkbox" id="with-gif"> 生成GIF
   </label>
-  <button id="btn-theme" title="切换深浅色">🌓</button>
-  <button id="btn-go" class="primary">脱水</button>
-</div>
+    <button id="btn-go" class="primary">开始脱水</button>
+  </div>
+  <button id="btn-theme" class="icon-button" title="切换深浅色" aria-label="切换深浅色">◐</button>
+</header>
 
 <div id="library" class="container">
   <div class="main panel">
     <div class="lib-toolbar">
-      <h2>📖 我的菜谱库</h2>
+      <div class="library-heading"><span class="eyebrow">RECIPE LIBRARY</span><h2>今天想做点什么？</h2></div>
       <input id="lib-search" type="text" placeholder="🔍 搜菜名或食材…" />
       <select id="lib-category"></select>
-      <select id="lib-sort">
+      <select id="lib-sort" aria-label="菜谱排序">
         <option value="pinned">置顶优先</option>
         <option value="recent">最近做过</option>
         <option value="newest">最新</option>
@@ -39,8 +41,8 @@
 <div id="card-view" hidden>
   <div class="container">
     <div class="main panel">
-      <button id="back-to-library" style="margin-bottom:10px">← 返回菜谱库</button>
-      <div class="mode-tabs">
+      <button id="back-to-library" class="back-button">← 菜谱库</button>
+      <div class="mode-tabs" aria-label="查看模式">
         <button class="mode-tab active" data-mode="browse">📖 浏览</button>
         <button class="mode-tab" data-mode="cook">🍳 做菜</button>
         <button class="mode-tab" data-mode="shop">🛒 买菜</button>
@@ -72,7 +74,11 @@
   </div>
 </div>
 
-<div id="status" class="status" style="text-align:center"></div>
+<div id="status" class="status" aria-live="polite"></div>
+<nav class="mobile-nav" aria-label="主导航">
+  <a href="#/" class="mobile-nav-item">📖<span>菜谱库</span></a>
+  <button class="mobile-nav-item mobile-import" id="btn-mobile-import">＋<span>脱水新视频</span></button>
+</nav>
 <script type="module" src="/static/dist/app.js"></script>
 <script>
   // Service Worker 注册（PWA 离线）
