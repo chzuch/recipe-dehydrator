@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 
 def _step(index: int, start: float, end: float, title: str = "步骤") -> Step:
-    return Step(index=index, title=title, description="做", start_sec=start, end_sec=end)
+    return Step(index=index, title=title, phase="烹饪", description="做", start_sec=start, end_sec=end)
 
 
 class TestSubtitleLine:
@@ -24,10 +24,10 @@ class TestSubtitleLine:
 class TestStep:
     def test_end_before_start_rejected(self) -> None:
         with pytest.raises(ValidationError, match="end_sec"):
-            Step(index=1, title="切", description="切肉", start_sec=10, end_sec=5)
+            Step(index=1, title="切", phase="烹饪", description="切肉", start_sec=10, end_sec=5)
 
     def test_ok(self) -> None:
-        step = Step(index=1, title="切", description="切肉", start_sec=5, end_sec=10)
+        step = Step(index=1, title="切", phase="烹饪", description="切肉", start_sec=5, end_sec=10)
         assert step.done_when is None
 
 

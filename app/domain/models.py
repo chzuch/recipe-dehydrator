@@ -24,7 +24,9 @@ class Ingredient(BaseModel):
     name: str = Field(min_length=1, description="食材名，如「牛腩肉」")
     amount: str | None = Field(default=None, description="用量，如「500克」")
     note: str | None = Field(default=None, description="选购/处理备注，如「选肥瘦相间的」")
-    category: Literal["主料", "配菜", "调料", "需提前自制"] = Field(description="食材分类")
+    category: Literal["主料", "配菜", "调味料", "香料", "需提前自制"] = Field(
+        description="食材分类；调味料=家庭常备（油盐酱醋），香料=葱姜蒜/桂皮八角花椒等"
+    )
     essential: bool = Field(description="是否必不可少（核心食材）；可选/锦上添花为 False")
 
 
@@ -33,6 +35,7 @@ class Step(BaseModel):
 
     index: int = Field(ge=1, description="步骤序号，从 1 起")
     title: str = Field(min_length=1, description="步骤标题，如「切牛肉」")
+    phase: str = Field(min_length=1, description="所属阶段，如「备料」「熬制酱料」「炒制」「收尾」")
     description: str = Field(min_length=1, description="做了什么（动作用语）")
     done_when: str | None = Field(default=None, description="达成状态，如「炖 10 分钟」「煮到变色」")
     tip: str | None = Field(default=None, description="新手易错点")

@@ -18,12 +18,17 @@ def _recipe(*steps: Step, ingredients: list[Ingredient] | None = None) -> Recipe
 
 def _ing(name: str, amount: str | None = None, note: str | None = None) -> Ingredient:
     """测试食材构造器：category/essential 用占位值。"""
-    return Ingredient(name=name, amount=amount, note=note, category="调料", essential=True)
+    return Ingredient(name=name, amount=amount, note=note, category="调味料", essential=True)
 
 
 def _step(index: int, start: float, end: float, text: str = "") -> Step:
     return Step(
-        index=index, title=text or f"步骤{index}", description=text or f"做{index}", start_sec=start, end_sec=end
+        index=index,
+        title=text or f"步骤{index}",
+        phase="烹饪",
+        description=text or f"做{index}",
+        start_sec=start,
+        end_sec=end,
     )
 
 
