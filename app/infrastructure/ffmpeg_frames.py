@@ -27,6 +27,46 @@ class FFmpegFrameExtractor:
             names.append(name)
         return names
 
+    async def extract_gif(self, video_path: str, start_sec: float, duration_sec: float, out_dir: str) -> str:
+        """截取片段生成循环 GIF（480p、10fps，调色板两步法保证质量）。"""
+        out = Path(out_dir)
+        await asyncio.to_thread(out.mkdir, parents=True, exist_ok=True)
+        name = f"clip_{start_sec:07.1f}.gif"
+        dest = out / name
+        palette = out / f"palette_{start_sec:07.1f}.png"
+        try:
+            await asyncio.to_thread(self._gif_palette, video_path, start_sec, duration_sec, palette)
+            await asyncio.to_thread(self._gif_render, video_path, start_sec, duration_sec, palette, dest)
+        finally:
+            palette.unlink(missing_ok=True)
+        if not dest.exists():
+            msg = f"ffmpeg 未生成 GIF at {start_sec:.1f}s"
+            raise RuntimeError(msg)
+        return name
+
+    def _gif_palette(self, video_path: str, start: float, dur: float, palette: Path) -> None:
+        cmd = [
+            self._ffmpeg, "-y", "-ss", f"{start:.3f}", "-t", f"{dur:.2f}", "-i", video_path,
+            "-vf", "fps=10,scale=480:-1:flags=lanczos,palettegen",
+            str(palette),
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode != 0:
+            msg = f"ffmpeg 调色板生成失败 at {start:.1f}s: {proc.stderr.strip()[:200]}"
+            raise RuntimeError(msg)
+
+    def _gif_render(self, video_path: str, start: float, dur: float, palette: Path, dest: Path) -> None:
+        cmd = [
+            self._ffmpeg, "-y", "-ss", f"{start:.3f}", "-t", f"{dur:.2f}", "-i", video_path,
+            "-i", str(palette),
+            "-lavfi", "fps=10,scale=480:-1:flags=lanczos[x];[x][1:v]paletteuse",
+            str(dest),
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode != 0:
+            msg = f"ffmpeg GIF 生成失败 at {start:.1f}s: {proc.stderr.strip()[:200]}"
+            raise RuntimeError(msg)
+
     def _extract_one(self, video_path: str, ts: float, dest: Path) -> None:
         cmd = [
             self._ffmpeg,

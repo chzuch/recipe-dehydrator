@@ -77,10 +77,15 @@ class FakeFrameExtractor:
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, list[float], str]] = []
+        self.gif_calls: list[tuple[str, float, float, str]] = []
 
     async def extract(self, video_path: str, timestamps: list[float], out_dir: str) -> list[str]:
         self.calls.append((video_path, timestamps, out_dir))
         return [f"{video_path}-{t:.0f}.jpg" for t in timestamps]
+
+    async def extract_gif(self, video_path: str, start_sec: float, duration_sec: float, out_dir: str) -> str:
+        self.gif_calls.append((video_path, start_sec, duration_sec, out_dir))
+        return f"clip_{start_sec:.1f}.gif"
 
 
 class FakeCardStore:

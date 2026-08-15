@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from app.domain.models import Ingredient, Recipe, Step
+from app.domain.models import Ingredient, Recipe, Step, SubtitleLine
 from app.domain.rules import (
     check_ingredient_closure,
     check_order,
     check_time_consistency,
+    is_action_step,
     merge_duplicate_ingredients,
+    pick_frame_time,
     validate_recipe,
 )
 
@@ -141,3 +143,30 @@ class TestMergeDuplicateIngredients:
             [_ing(name="花 生 油"), _ing(name="花生油", amount="100克")]
         )
         assert len(merged) == 2  # 不 trim 内部空格，仅去重同名（含空格视为不同，保守）
+
+
+class TestPickFrameTime:
+    def test_aligns_to_action_line(self) -> None:
+        """步骤区间内含动作的字幕行中点优先（而非区间中点）。"""
+        step = _step(1, 100, 140, "翻炒")
+        lines = [
+            SubtitleLine(start=100, end=110, text="现在我们把鸡肉准备好"),
+            SubtitleLine(start=120, end=126, text="下锅翻炒至变色"),
+        ]
+        t = pick_frame_time(step, lines)
+        assert t == 123.0  # (120+126)/2
+
+    def test_fallback_to_midpoint(self) -> None:
+        step = _step(1, 100, 140, "静置")
+        lines = [SubtitleLine(start=100, end=140, text="什么都不做静静等待")]
+        assert pick_frame_time(step, lines) == 120.0
+
+
+class TestIsActionStep:
+    def test_action_word_triggers(self) -> None:
+        step = Step(index=1, title="翻炒鸡肉", phase="炒制", description="下锅快速翻炒", start_sec=0, end_sec=10)
+        assert is_action_step(step) is True
+
+    def test_static_step_not_triggered(self) -> None:
+        step = Step(index=1, title="切牛肉", phase="备料", description="牛腩肉切成稍大的块", start_sec=0, end_sec=10)
+        assert is_action_step(step) is False

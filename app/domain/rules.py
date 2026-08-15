@@ -15,7 +15,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from app.domain.models import Ingredient, Recipe
+from app.domain.models import Ingredient, Recipe, Step, SubtitleLine
 
 # 相邻步骤间允许的最大闲话间隙（秒）：超过视为「可能漏了步骤」
 MAX_GAP_SEC = 30.0
@@ -23,6 +23,37 @@ MAX_GAP_SEC = 30.0
 MAX_OVERLAP_SEC = 2.0
 # 总跨度与视频时长的最大相对偏差
 MAX_DURATION_DRIFT = 0.2
+
+# 触发 GIF 生成的动作词（这些动作静态图教不会，新手需要看手法）
+GIF_ACTION_WORDS = ("翻炒", "搅拌", "颠", "淋", "搅", "翻拌", "掂", "泼", "倒入")
+# GIF 片段时长（秒）
+GIF_DURATION_SEC = 2.0
+
+
+def pick_frame_time(step: Step, lines: list[SubtitleLine]) -> float:
+    """关键句对齐抽帧：在步骤区间内找含烹饪动作的字幕行，取该行中点。
+
+    说「倒入料酒」时画面大概率正在倒——比区间中点靠谱得多。
+    找不到则回退区间中点。
+    """
+    in_range = [
+        line
+        for line in lines
+        if line.start >= step.start_sec - MAX_OVERLAP_SEC and line.end <= step.end_sec + MAX_OVERLAP_SEC
+    ]
+    for line in in_range:
+        if any(
+            v in line.text
+            for v in ("切", "炒", "炖", "煮", "焯", "炸", "煎", "加", "倒", "放", "翻炒", "搅拌", "收汁")
+        ):
+            return (line.start + line.end) / 2
+    return step.start_sec + (step.end_sec - step.start_sec) / 2
+
+
+def is_action_step(step: Step) -> bool:
+    """该步骤是否包含需要看手法的动作（触发 GIF 生成）。"""
+    text = step.title + step.description + (step.tip or "")
+    return any(w in text for w in GIF_ACTION_WORDS)
 
 
 def merge_duplicate_ingredients(ingredients: list[Ingredient]) -> list[Ingredient]:

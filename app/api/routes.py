@@ -73,4 +73,5 @@ async def api_get_frame(frame_name: str, request: Request) -> FileResponse:
     candidate = (frames_dir / frame_name).resolve()
     if not candidate.is_relative_to(frames_dir.resolve()) or not candidate.is_file():
         raise HTTPException(status_code=404, detail="截图不存在")
-    return FileResponse(candidate, media_type="image/jpeg")
+    media_type = "image/gif" if candidate.suffix == ".gif" else "image/jpeg"
+    return FileResponse(candidate, media_type=media_type)

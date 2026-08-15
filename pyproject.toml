@@ -35,6 +35,8 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 # prompt 模板与字幕样例是"发给 LLM 的文本数据"，折行会改变内容，豁免行宽
 "app/application/prompts.py" = ["E501"]
 "tests/unit/test_subtitle.py" = ["E501"]
+# eval 是手动评估脚本（非 web 服务代码），同步 Path 调用可接受
+"eval/run_eval.py" = ["ASYNC240"]
 
 [tool.ruff.format]
 quote-style = "double"

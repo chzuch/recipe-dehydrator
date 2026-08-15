@@ -42,6 +42,7 @@
   .step .done { color: #2e7d32; font-size: 13px; margin-top: 4px; }
   .step .tip { color: #b26a00; font-size: 13px; margin-top: 4px; }
   .step img { max-width: 220px; border-radius: 8px; margin-top: 8px; display: block; }
+  .step img.gif { border: 2px solid var(--accent); }
   .step .watch { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--accent); text-decoration: none; }
   .tool { display: inline-block; background: #f3efe8; border-radius: 20px; padding: 4px 12px; font-size: 13px; margin: 0 6px 6px 0; }
   .history-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f2efe9; }
@@ -192,6 +193,7 @@ function render(recipe, cardId) {
           ${s.done_when ? `<div class="done">✅ ${esc(s.done_when)}</div>` : ''}
           ${s.tip ? `<div class="tip">⚠️ ${esc(s.tip)}</div>` : ''}
           ${s.frame_path ? `<img src="/api/frames/${encodeURIComponent(s.frame_path)}" alt="步骤${s.index}">` : ''}
+          ${s.gif_path ? `<img class="gif" src="/api/frames/${encodeURIComponent(s.gif_path)}" alt="步骤${s.index}动作演示">` : ''}
           ${recipe.source_url ? `<a class="watch" href="${esc(recipe.source_url)}?t=${Math.round(s.start_sec)}" target="_blank">▶ 看原视频 ${fmt(s.start_sec)}</a>` : ''}
         </div>
       </div>`).join('')}`).join('') || '<div class="empty">无步骤</div>'}

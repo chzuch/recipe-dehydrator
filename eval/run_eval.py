@@ -16,7 +16,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.api.config import Settings
 from app.application.dehydrate import DehydrateUseCase
 from app.domain.exceptions import DehydratorError
-from app.domain.models import Recipe
 from app.domain.scorer import score_recipe
 from app.infrastructure.bilibili_fetcher import BilibiliFetcher
 from app.infrastructure.ffmpeg_frames import FFmpegFrameExtractor

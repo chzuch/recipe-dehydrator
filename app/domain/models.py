@@ -42,6 +42,7 @@ class Step(BaseModel):
     start_sec: float = Field(ge=0, description="字幕区间起点（秒）")
     end_sec: float = Field(ge=0, description="字幕区间终点（秒）")
     frame_path: str | None = Field(default=None, description="步骤截图路径（相对 data 目录）")
+    gif_path: str | None = Field(default=None, description="动作演示 GIF 路径（仅动作类步骤生成）")
 
     @model_validator(mode="after")
     def _check_range(self) -> Step:

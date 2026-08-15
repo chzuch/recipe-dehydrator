@@ -46,6 +46,9 @@ class FrameExtractor(Protocol):
     async def extract(self, video_path: str, timestamps: list[float], out_dir: str) -> list[str]:
         """在给定时间点各抽一帧，返回截图文件名列表（与 timestamps 顺序一致）。"""
 
+    async def extract_gif(self, video_path: str, start_sec: float, duration_sec: float, out_dir: str) -> str:
+        """从 start_sec 截取 duration_sec 秒生成循环 GIF，返回文件名。"""
+
 
 class CardStore(Protocol):
     """菜谱卡持久化（SQLite 实现）。"""

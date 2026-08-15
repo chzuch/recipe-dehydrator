@@ -27,7 +27,13 @@ from app.domain.exceptions import (
 )
 from app.domain.models import Recipe, SubtitleLine
 from app.domain.ports import CardStore, Fetcher, FrameExtractor, LLMClient
-from app.domain.rules import merge_duplicate_ingredients, validate_recipe
+from app.domain.rules import (
+    GIF_DURATION_SEC,
+    is_action_step,
+    merge_duplicate_ingredients,
+    pick_frame_time,
+    validate_recipe,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +82,7 @@ class DehydrateUseCase:
         recipe.warnings = [i.message for i in issues if i.severity == "warning"]
 
         if want_frames:
-            await self._attach_frames(recipe)
+            await self._attach_frames(recipe, lines)
 
         card_id = await self._store.save(recipe)
         await self._fetcher.cleanup()
@@ -144,12 +150,12 @@ class DehydrateUseCase:
         msg = "切分失败（不应到达）"
         raise ValidationFailedError(msg)
 
-    async def _attach_frames(self, recipe: Recipe) -> None:
-        """为每个步骤在时间区间中点抽一帧；失败不阻断整张卡。"""
+    async def _attach_frames(self, recipe: Recipe, lines: list[SubtitleLine]) -> None:
+        """步骤配图：静态图关键句对齐抽帧 + 动作步骤生成 GIF；失败不阻断整张卡。"""
         video_path = await self._fetcher.video_path()
         if not video_path:
             return
-        timestamps = [s.start_sec + (s.end_sec - s.start_sec) / 2 for s in recipe.steps]
+        timestamps = [pick_frame_time(s, lines) for s in recipe.steps]
         try:
             names = await self._frames.extract(video_path, timestamps, str(self._frames_dir))
         except (RuntimeError, OSError) as exc:
@@ -157,3 +163,16 @@ class DehydrateUseCase:
             return
         for step, name in zip(recipe.steps, names, strict=True):
             step.frame_path = name
+
+        # 动作步骤（翻炒/搅拌等）生成 2 秒循环 GIF——新手最缺的是手法
+        for step in recipe.steps:
+            if not is_action_step(step):
+                continue
+            duration = min(GIF_DURATION_SEC, max(0.5, step.end_sec - step.start_sec))
+            start = max(step.start_sec, pick_frame_time(step, lines) - 0.5)
+            try:
+                step.gif_path = await self._frames.extract_gif(
+                    video_path, start, duration, str(self._frames_dir)
+                )
+            except (RuntimeError, OSError) as exc:
+                logger.warning("步骤%d GIF 生成失败，跳过: %s", step.index, exc)
