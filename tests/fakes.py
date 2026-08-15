@@ -7,8 +7,17 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.application.prompts import PRECHECK_SYSTEM
 from app.domain.models import Recipe, SubtitleLine
 from pydantic import BaseModel
+
+# 默认预检响应：单菜烹饪视频（大多数测试用例需要）
+DEFAULT_PRECHECK: dict[str, Any] = {
+    "is_cooking": True,
+    "dish_count": 1,
+    "dishes": ["测试菜"],
+    "summary": "单菜烹饪教学",
+}
 
 
 class FakeVideoInfo(BaseModel):
@@ -19,17 +28,24 @@ class FakeVideoInfo(BaseModel):
 
 
 class FakeLLMClient:
-    """按调用顺序返回预置响应的 LLM fake（dict 为合法 JSON 对象，str 模拟不可解析输出）。"""
+    """按 system 分发响应：预检返回固定结果，切分按调用顺序返回预置响应。"""
 
     provider_name = "fake"
     model = "fake-model"
 
-    def __init__(self, responses: list[dict[str, Any] | str]) -> None:
+    def __init__(
+        self,
+        responses: list[dict[str, Any] | str],
+        precheck_response: dict[str, Any] | None = None,
+    ) -> None:
         self._responses = list(responses)
+        self._precheck_response = precheck_response or DEFAULT_PRECHECK
         self.calls: list[tuple[str, str]] = []
 
     async def complete_json(self, system: str, prompt: str) -> dict[str, Any] | str:
         self.calls.append((system, prompt))
+        if system == PRECHECK_SYSTEM:
+            return self._precheck_response
         if not self._responses:
             msg = "FakeLLMClient 没有更多预置响应"
             raise AssertionError(msg)

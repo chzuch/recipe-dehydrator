@@ -6,7 +6,9 @@ from typing import Any
 
 import pytest
 from app.application.dehydrate import DehydrateUseCase
+from app.application.prompts import SYSTEM_SPLIT
 from app.domain.exceptions import (
+    MultiDishError,
     NoCookingContentError,
     SubtitleNotFoundError,
     ValidationFailedError,
@@ -102,7 +104,8 @@ class TestDehydratePipeline:
         llm = FakeLLMClient([OVERLAP_RECIPE, SAMPLE_RECIPE])
         usecase, _, _, _ = _make_usecase(llm)
         _, recipe = await usecase.run("BV1xx")
-        assert len(llm.calls) == 2
+        split_calls = [c for c in llm.calls if c[0] == SYSTEM_SPLIT]
+        assert len(split_calls) == 2
         assert recipe.steps[1].start_sec == 5.0
 
     @pytest.mark.asyncio
@@ -139,7 +142,8 @@ class TestDehydratePipeline:
         llm = FakeLLMClient(["不是JSON", SAMPLE_RECIPE])
         usecase, _, _, _ = _make_usecase(llm)
         _, recipe = await usecase.run("BV1xx")
-        assert len(llm.calls) == 2
+        split_calls = [c for c in llm.calls if c[0] == SYSTEM_SPLIT]
+        assert len(split_calls) == 2
         assert recipe.title == "红烧牛肉"
 
     @pytest.mark.asyncio
@@ -149,7 +153,8 @@ class TestDehydratePipeline:
         usecase, _, _, _ = _make_usecase(llm)
         with pytest.raises(NoCookingContentError):
             await usecase.run("BV1xx")
-        assert len(llm.calls) == 1  # 不重试
+        split_calls = [c for c in llm.calls if c[0] == SYSTEM_SPLIT]
+        assert len(split_calls) == 1  # 切分不重试
 
     @pytest.mark.asyncio
     async def test_duplicate_ingredients_merged_before_save(self) -> None:
@@ -169,3 +174,24 @@ class TestDehydratePipeline:
         assert recipe.ingredients[0].amount == "50克；700克"
         saved = await store.get(card_id)
         assert saved is not None and len(saved.ingredients) == 2
+
+    @pytest.mark.asyncio
+    async def test_multi_dish_video_rejected(self) -> None:
+        """预检判定多菜合集 → MultiDishError，不切分（真实需求：28 分钟 6 菜合集）。"""
+        multi = {
+            "is_cooking": True,
+            "dish_count": 6,
+            "dishes": ["红烧牛肋条", "沙茶牛肉煲", "番茄牛腩"],
+            "summary": "6 种牛肉做法合集",
+        }
+        usecase, _, _, _ = _make_usecase(FakeLLMClient([SAMPLE_RECIPE], precheck_response=multi))
+        with pytest.raises(MultiDishError, match="6 道菜"):
+            await usecase.run("BV1xx")
+
+    @pytest.mark.asyncio
+    async def test_non_cooking_video_rejected(self) -> None:
+        """预检判定非烹饪内容（吃播/探店/纯音乐）→ NoCookingContentError。"""
+        not_cooking = {"is_cooking": False, "dish_count": 0, "dishes": [], "summary": "吃播"}
+        usecase, _, _, _ = _make_usecase(FakeLLMClient([SAMPLE_RECIPE], precheck_response=not_cooking))
+        with pytest.raises(NoCookingContentError):
+            await usecase.run("BV1xx")

@@ -83,6 +83,34 @@ SYSTEM_SPLIT = """你是一个中文美食视频字幕的结构化分析器。
  ], "tips": []}
 """
 
+# 预检：切分前的快速判断（单菜/多菜/非烹饪），token 极少
+PRECHECK_SYSTEM = """你是一个视频内容预检器。根据视频标题和字幕片段，判断这个视频是否值得做「菜谱脱水」。
+
+判断规则：
+1. is_cooking：视频是否包含烹饪教学内容（讲怎么做菜）。背景音乐歌词、纯吃播、探店等非教学内容 → false。
+2. dish_count：视频里教了几道菜。只教一道菜 → 1；教多道不同的菜（合集/盘点类）→ 实际数量。
+3. dishes：每道菜的名字（按出现顺序）。
+4. summary：一句话概括视频内容。
+
+输出必须是合法 JSON 对象：
+{"is_cooking": true, "dish_count": 1, "dishes": ["菜名"], "summary": "一句话概括"}
+"""
+
+
+def build_precheck_prompt(title: str, lines: list[SubtitleLine]) -> str:
+    """预检请求：标题 + 首尾字幕片段（不用全量，控制 token）。"""
+    head = lines[:15]
+    tail = lines[-10:] if len(lines) > 15 else []
+    snippet = "\n".join(f"{line.text}" for line in head)
+    if tail:
+        snippet += "\n...\n" + "\n".join(f"{line.text}" for line in tail)
+    return (
+        f"视频标题：{title}\n"
+        f"字幕总行数：{len(lines)}\n\n"
+        f"字幕片段（开头 + 结尾）：\n{snippet}\n\n"
+        f"按系统提示的 JSON 结构输出判断结果，不要输出任何其他文字。"
+    )
+
 
 def build_split_prompt(lines: list[SubtitleLine]) -> str:
     """组装切分请求：字幕行 → user prompt。"""

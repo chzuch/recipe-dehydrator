@@ -12,12 +12,15 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from app.application.prompts import (
+    PRECHECK_SYSTEM,
     SYSTEM_SPLIT,
+    build_precheck_prompt,
     build_retry_prompt,
     build_split_prompt,
 )
 from app.domain.exceptions import (
     LLMError,
+    MultiDishError,
     NoCookingContentError,
     SubtitleNotFoundError,
     ValidationFailedError,
@@ -56,6 +59,8 @@ class DehydrateUseCase:
         if not lines:
             raise SubtitleNotFoundError("字幕预处理后为空，无法脱水")
 
+        await self._precheck(video.title, lines)
+
         recipe = await self._split_with_retry(lines)
         recipe.source_url = url
         recipe.source_title = video.title
@@ -77,6 +82,21 @@ class DehydrateUseCase:
         await self._fetcher.cleanup()
         logger.info("dehydrated %s → card %s (%d 步骤)", url, card_id, len(recipe.steps))
         return card_id, recipe
+
+    async def _precheck(self, title: str, lines: list[SubtitleLine]) -> None:
+        """预检：非烹饪内容 / 多菜合集直接拒绝（token 极少的一次性判断）。"""
+        raw = await self._llm.complete_json(PRECHECK_SYSTEM, build_precheck_prompt(title, lines))
+        if not isinstance(raw, dict):
+            return  # 预检输出异常不阻断，交给切分阶段兜底
+        if raw.get("is_cooking") is False:
+            raise NoCookingContentError("该视频不是烹饪教学（可能是吃播/探店/纯音乐），无法脱水")
+        dish_count = raw.get("dish_count") or 1
+        if isinstance(dish_count, int) and dish_count > 1:
+            dishes = [str(d) for d in (raw.get("dishes") or [])][:6]
+            detail = "、".join(dishes) if dishes else "多道菜"
+            raise MultiDishError(
+                f"该视频包含 {dish_count} 道菜（{detail}）。当前只支持单菜视频，请提供只教一道菜的视频"
+            )
 
     async def _split_with_retry(self, lines: list[SubtitleLine]) -> Recipe:
         """调用 LLM 切分；输出无法解析或校验失败时，携带问题重试一次。"""

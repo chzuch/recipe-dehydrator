@@ -25,3 +25,7 @@ class ValidationFailedError(DehydratorError):
 
 class NoCookingContentError(DehydratorError):
     """字幕不含烹饪步骤信息（疑似全部为背景音乐歌词/无效内容），无法脱水。"""
+
+
+class MultiDishError(DehydratorError):
+    """视频包含多道菜（合集），当前只支持单菜视频。"""
