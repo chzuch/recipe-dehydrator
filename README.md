@@ -70,7 +70,7 @@ B站视频链接
   → 存入个人菜谱库（SQLite）
 ```
 
-**设计文档** / Docs: [前端设计](docs/frontend-design.md) · 范围与验收标准见 [SCOPE.md](SCOPE.md) · 编码规范见 [CLAUDE.md](CLAUDE.md)
+**设计文档** / Docs: [前端设计](docs/frontend-design.md) · [范围与验收](docs/SCOPE.md) · [编码规范](CLAUDE.md)
 
 ---
 

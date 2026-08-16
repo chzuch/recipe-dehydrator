@@ -1,21 +1,21 @@
 # CLAUDE.md — 项目开发规范与 Agent 约束
 
 > 本文件是**硬性约束**，对开发者（含 AI 编码 agent）同等生效。
-> 两个事实来源的分工：**SCOPE.md** 管"做什么"（范围、验收、边界）；**本文件**管"怎么改代码"（规范、纪律、流程）。
-> 冲突时：范围问题听 SCOPE.md，变更纪律问题听本文件；涉及取舍分歧，先问人，不自行拍板。
+> 两个事实来源的分工：**[docs/SCOPE.md](docs/SCOPE.md)** 管"做什么"（范围、验收、边界）；**本文件**管"怎么改代码"（规范、纪律、流程）。
+> 冲突时：范围问题听 docs/SCOPE.md，变更纪律问题听本文件；涉及取舍分歧，先问人，不自行拍板。
 
 ## 0. 项目身份
 
-- 项目：视频脱水机 v0.1（B站视频 → 图文菜谱卡）
-- 语言：Python 3.14；包管理：uv
-- 架构：分层架构（api → application → domain ← infrastructure），详见 SCOPE.md §9
-- 测试框架：pytest；质量工具：ruff（lint+format）、mypy（type check）
+- 项目：recipe-dehydrator（菜谱脱水机，MIT 开源）：B站视频 → 图文菜谱卡 → 个人菜谱库
+- 语言：Python 3.14（后端）+ TypeScript（前端，esbuild 构建，无框架）
+- 架构：分层架构（api → application → domain ← infrastructure），详见 docs/SCOPE.md §9
+- 测试框架：pytest（后端）；质量工具：ruff + mypy（后端）、tsc --noEmit（前端）
 
 ---
 
 ## 1. 通用纪律（任何修改都适用）
 
-1. **先读再改**：动任何文件前，先读 SCOPE.md、CLAUDE.md、目标模块及其全部调用方，理解设计意图
+1. **先读再改**：动任何文件前，先读 docs/SCOPE.md、CLAUDE.md、目标模块及其全部调用方，理解设计意图
 2. **遵循既有模式**：新代码沿用项目里已有的范式（分层、端口抽象、异常分层、测试风格）。引入新范式必须先说明理由并获得确认
 3. **最小改动**：只改解决当前问题必需的代码；不做顺手重构、不美化无关代码
 4. **禁止破坏性操作**：修改公共接口签名/语义；修改数据库 schema 必须要请求，并且经过设计审核
@@ -77,7 +77,7 @@
 3. （可选）重构，保持全绿
 4. 检查重复：引入新逻辑时确认无既有实现可复用；有重复则先抽象
 5. 全量验证：`uv run pytest` + `uv run ruff check .` + `uv run mypy app`
-6. 更新受影响文档（README / SCOPE.md 相关节）
+6. 更新受影响文档（README / docs/SCOPE.md 相关节）
 7. 提交：conventional commits（`feat:` `fix:` `refactor:` `test:` `docs:` `chore:`），一次提交一个逻辑变更
 
 ---
@@ -106,7 +106,7 @@
 - ❌ 全局可变状态 / 隐式依赖（一律构造注入）
 - ❌ 在 domain 层 import 第三方库
 - ❌ 复制粘贴既有实现（应抽取公共函数）
-- ❌ 未经讨论修改 SCOPE.md 的范围、验收标准、边界
+- ❌ 未经讨论修改 docs/SCOPE.md 的范围、验收标准、边界
 - ❌ 为了"快"引入与现有架构冲突的写法（如新模块绕过分层直接调外部 SDK）
 
 ---
