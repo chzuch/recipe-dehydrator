@@ -31,3 +31,8 @@ app/static/dist/
 .vscode/
 .DS_Store
 eval/screenshots/
+
+# 原始截图（大体积，不入库）
+computer.png
+ipad.png
+phone.png

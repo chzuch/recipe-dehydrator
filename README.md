@@ -7,6 +7,8 @@
 
 ![Python](https://img.shields.io/badge/Python-3.14-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-ES2022-3178c6) ![MIT](https://img.shields.io/badge/License-MIT-green)
 
+<img src="assets/computer.jpg" alt="菜谱库" width="800">
+
 </div>
 
 ---
@@ -71,6 +73,15 @@ B站视频链接
 ```
 
 **设计文档** / Docs: [前端设计](docs/frontend-design.md) · [范围与验收](docs/SCOPE.md) · [编码规范](CLAUDE.md)
+
+---
+
+## 📱 界面预览 / Screenshots
+
+<div align="center">
+  <img src="assets/ipad.jpg" alt="平板做菜模式" height="420">
+  <img src="assets/phone.jpg" alt="手机菜谱库" height="420">
+</div>
 
 ---
 
