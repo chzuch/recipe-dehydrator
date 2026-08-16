@@ -152,7 +152,7 @@
 - 依赖注入在 `app/main.py` 组合根完成，不引入 DI 框架
 
 ```
-video-dehydrator/
+recipe-dehydrator/
 ├── SCOPE.md                  # 范围定义（事实来源 #1）
 ├── CLAUDE.md                 # 编码规范与 Agent 开发约束（事实来源 #2）
 ├── README.md                 # 使用说明

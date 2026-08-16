@@ -1,5 +1,5 @@
 [project]
-name = "video-dehydrator"
+name = "recipe-dehydrator"
 version = "0.1.0"
 description = "B站视频脱水机：视频链接 → 图文菜谱卡（本地自用）"
 readme = "README.md"

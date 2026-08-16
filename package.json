@@ -1,5 +1,5 @@
 {
-  "name": "video-dehydrator",
+  "name": "recipe-dehydrator",
   "version": "0.2.0",
   "description": "把 B站做饭视频「脱水」成能照着做的图文菜谱卡",
   "private": true,
